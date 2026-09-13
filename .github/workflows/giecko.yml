@@ -1,0 +1,32 @@
+name: 🦎 Giecko Terminal
+
+on:
+  workflow_dispatch:
+    inputs:
+      password:
+        description: 'Terminal password (blank = NO auth, anyone with the link gets in)'
+        required: false
+        default: 'giecko'
+      duration_minutes:
+        description: 'How long to keep the terminal alive (max 360 = 6h, GitHub limit)'
+        required: false
+        default: '180'
+      packages:
+        description: 'Extra apt packages to install (space-separated, e.g. "neovim golang")'
+        required: false
+        default: ''
+
+run-name: 🦎 Giecko session
+
+jobs:
+  terminal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start Giecko virtual terminal
+        run: |
+          chmod +x scripts/giecko.sh
+          ./scripts/giecko.sh "${{ inputs.password }}" "${{ inputs.duration_minutes }}" "${{ inputs.packages }}"
