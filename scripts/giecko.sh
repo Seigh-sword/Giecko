@@ -109,15 +109,28 @@ rm -f ttyd.log
 nohup ttyd $TTYD_ARGS $SHELL_CMD > ttyd.log 2>&1 &
 echo "$!" > ttyd.pid
 
+# Authenticated curl args for the health check (ttyd answers 401 without them!)
+CURL_AUTH=()
+if [ -n "$PASSWORD" ]; then
+  CURL_AUTH=(-u "$USER:$PASSWORD")
+fi
+ttyd_up() {
+  # any HTTP response code (200, 401...) means ttyd is listening;
+  # 000 means connection failed
+  local code
+  code=$(curl -s -o /dev/null -w "%{http_code}" "${CURL_AUTH[@]}" "http://localhost:$PORT/" || echo "000")
+  [ "$code" != "000" ] && [ "$code" != "" ]
+}
+
 echo "⏳ Waiting for ttyd to listen..."
 for _ in $(seq 1 20); do
-  if curl -fs -o /dev/null "http://localhost:$PORT/"; then
+  if ttyd_up; then
     echo "✅ ttyd is up"
     break
   fi
   sleep 1
 done
-if ! curl -fs -o /dev/null "http://localhost:$PORT/"; then
+if ! ttyd_up; then
   echo "❌ ttyd failed to start. Log:"
   cat ttyd.log
   exit 1
