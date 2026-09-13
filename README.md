@@ -63,6 +63,12 @@ The same script runs on any Linux box:
 - [ ] QR code in the summary for opening on your phone
 - [ ] `giecko` CLI: `giecko up --password ...` that dispatches the workflow via `gh`
 
+## 🧪 Self-test on push
+
+Every push to the default branch auto-starts a **10-minute test session**
+(same workflow, throwaway password) — that way the tunnel is verified working
+on every change. To skip it, put `[skip giecko]` in your commit message.
+
 ## 🧩 How it works
 
 | Piece | What it does |
