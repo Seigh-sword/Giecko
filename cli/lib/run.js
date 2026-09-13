@@ -27,8 +27,9 @@ function ghRaw(args, token) {
 function ghApi(token, endpoint, fields, method) {
   const args = ["api", endpoint];
   if (method) args.push("-X", method);
-  for (const [k, v] of Object.entries(fields || {})) args.push("-f", `${k}=${String(v)}`);
-  const r = sh("gh", args, tokenEnv(token));
+  const input = fields ? JSON.stringify(fields) : undefined;
+  if (input) args.push("--input", "-");
+  const r = sh("gh", args, tokenEnv(token), input);
   if (!r.ok) throw new Error(`GitHub API ${method || "GET"} ${endpoint} failed [exit ${r.code}]: ${r.err || r.out || "(no output)"}`);
   return r.out;
 }

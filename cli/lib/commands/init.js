@@ -27,10 +27,10 @@ function myLogin(token) {
 
 function createRepo(token, owner, name, priv) {
   if (!owner) {
-    const j = ghApiJson(token, "user/repos", { name, private: String(priv) }, "POST");
+    const j = ghApiJson(token, "user/repos", { name, private: Boolean(priv) }, "POST");
     return j.full_name;
   }
-  const j = ghApiJson(token, `orgs/${owner}/repos`, { name, private: String(priv) }, "POST");
+  const j = ghApiJson(token, `orgs/${owner}/repos`, { name, private: Boolean(priv) }, "POST");
   return j.full_name;
 }
 

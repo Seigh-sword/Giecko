@@ -1,7 +1,8 @@
 const fs = require("fs");
+const crypto = require("crypto");
 const { parse } = require("../flags");
 const { tokenFor } = require("../store");
-const { haveGh, ghApiJson, ghPutJson, openBrowser } = require("../run");
+const { haveGh, ghApiJson, openBrowser } = require("../run");
 const { loadAll } = require("../templates");
 const { ensureAccepted } = require("../terms");
 const { sleepMs, parseReport, isMissing, waitFor, realUrl, showQr } = require("../report");
@@ -17,37 +18,102 @@ function repoDefaultBranch(token, repo) {
   return ghApiJson(token, `repos/${repo}`).default_branch;
 }
 
-function branchExists(token, repo, branch) {
-  try {
-    ghApiJson(token, `repos/${repo}/branches/${encodeURIComponent(branch)}`);
-    return true;
-  } catch (e) {
-    if (isMissing(e)) return false;
-    throw e;
-  }
+function unix(s) {
+  return s.replace(/\r\n/g, "\n");
+}
+
+function gitHash(body) {
+  return crypto.createHash("sha1").update(`blob ${Buffer.byteLength(body)}\0${body}`).digest("hex");
 }
 
 function fileSha(token, repo, branch, repoPath) {
   try {
     const j = ghApiJson(token, `repos/${repo}/contents/${repoPath}?ref=${encodeURIComponent(branch)}`);
-    return { sha: j.sha, body: Buffer.from(j.content, "base64").toString("utf8") };
+    return j.sha;
   } catch (e) {
     if (isMissing(e)) return null;
     throw e;
   }
 }
 
-function putFile(token, repo, branch, useBranch, repoPath, body, sha) {
-  const payload = {
-    message: `${sha ? "giecko: update" : "giecko: install"} ${repoPath}`,
-    content: Buffer.from(body).toString("base64"),
-  };
-  if (sha) payload.sha = sha;
-  if (useBranch) payload.branch = branch;
+function gitRef(token, repo, branch) {
+  let ref;
   try {
-    ghPutJson(token, `repos/${repo}/contents/${repoPath}`, payload);
+    ref = ghApiJson(token, `repos/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
   } catch (e) {
-    throw new Error(`could not write ${repoPath}: ${e.message}\n${PUT_HINT}`);
+    if (isMissing(e)) return null;
+    throw e;
+  }
+  const c = ghApiJson(token, `repos/${repo}/git/commits/${ref.object.sha}`);
+  return { sha: ref.object.sha, tree: c.tree.sha };
+}
+
+function gitBlob(token, repo, body) {
+  const j = ghApiJson(token, `repos/${repo}/git/blobs`, { content: Buffer.from(body).toString("base64"), encoding: "base64" }, "POST");
+  return j.sha;
+}
+
+function gitTree(token, repo, baseTree, entries) {
+  const payload = { tree: entries };
+  if (baseTree) payload.base_tree = baseTree;
+  return ghApiJson(token, `repos/${repo}/git/trees`, payload, "POST").sha;
+}
+
+function gitCommit(token, repo, message, tree, parents) {
+  return ghApiJson(token, `repos/${repo}/git/commits`, { message, tree, parents }, "POST").sha;
+}
+
+function gitUpdateRef(token, repo, branch, sha, existed) {
+  if (existed) {
+    ghApiJson(token, `repos/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, { sha }, "PATCH");
+  } else {
+    ghApiJson(token, `repos/${repo}/git/refs`, { ref: `refs/heads/${branch}`, sha }, "POST");
+  }
+}
+
+function installFiles(token, repo, branch, templates, reinstall, verbose) {
+  const say = (m) => {
+    if (verbose) process.stdout.write(m + "\n");
+  };
+  const pending = [];
+  for (const t of templates) {
+    const want = unix(t.body);
+    process.stdout.write(`checking ${t.repoPath}...\n`);
+    const sha = fileSha(token, repo, branch, t.repoPath);
+    if (!sha) {
+      say(`missing, will add (${want.length} chars)`);
+      pending.push({ repoPath: t.repoPath, source: t.source, want, existed: false });
+    } else if (sha !== gitHash(want) && reinstall) {
+      pending.push({ repoPath: t.repoPath, source: t.source, want, existed: true });
+    } else if (sha !== gitHash(want)) {
+      process.stdout.write(`kept ${t.repoPath} (differs; use --reinstall to overwrite)\n`);
+    } else {
+      process.stdout.write(`kept ${t.repoPath} (current)\n`);
+    }
+  }
+  if (!pending.length) return;
+  say(`uploading ${pending.length} file(s) in one commit...`);
+  try {
+    const ref = gitRef(token, repo, branch);
+    say(`base ref: ${ref ? ref.sha.slice(0, 7) : "(new branch)"}`);
+    const entries = pending.map((p) => ({
+      path: p.repoPath,
+      mode: p.repoPath.endsWith(".yml") ? "100644" : "100755",
+      type: "blob",
+      sha: gitBlob(token, repo, p.want),
+    }));
+    say(`tree from ${ref ? "base " + ref.tree.slice(0, 7) : "scratch"}...`);
+    const tree = gitTree(token, repo, ref ? ref.tree : null, entries);
+    const commit = gitCommit(token, repo, reinstall ? "giecko: reinstall session files" : "giecko: install session files", tree, ref ? [ref.sha] : []);
+    say(`commit ${commit.slice(0, 7)}, updating ref...`);
+    gitUpdateRef(token, repo, branch, commit, Boolean(ref));
+  } catch (e) {
+    throw new Error(`could not write install commit: ${e.message}\n${PUT_HINT}`);
+  }
+  for (const p of pending) {
+    const back = fileSha(token, repo, branch, p.repoPath);
+    if (back !== gitHash(p.want)) throw new Error(`verify failed for ${p.repoPath}: uploaded but the file is not there. Retry the command.`);
+    process.stdout.write(`${p.existed ? "updated" : "installed"} ${p.repoPath} (${p.source})\n`);
   }
 }
 
@@ -147,34 +213,17 @@ async function run(argv, cfg, store) {
 
   const branch = repoDefaultBranch(token, repo);
   say(`default branch: ${branch}`);
-  const branchLive = branchExists(token, repo, branch);
-  say(`branch exists (has commits): ${branchLive}`);
   if (!f["skip-install"]) {
     const templates = loadAll(token);
     say(`templates source: ${templates[0].source}`);
-    for (const t of templates) {
-      process.stdout.write(`checking ${t.repoPath}...\n`);
-      const cur = fileSha(token, repo, branch, t.repoPath);
-      if (!cur) {
-        say(`missing, uploading (${t.body.length} chars)`);
-        putFile(token, repo, branch, branchLive, t.repoPath, t.body, null);
-        process.stdout.write(`installed ${t.repoPath} (${t.source})\n`);
-      } else if (cur.body !== t.body && f.reinstall) {
-        putFile(token, repo, branch, true, t.repoPath, t.body, cur.sha);
-        process.stdout.write(`updated ${t.repoPath}\n`);
-      } else if (cur.body !== t.body) {
-        process.stdout.write(`kept ${t.repoPath} (differs; use --reinstall to overwrite)\n`);
-      } else {
-        process.stdout.write(`kept ${t.repoPath} (current)\n`);
-      }
-    }
+    installFiles(token, repo, branch, templates, f.reinstall, f.verbose);
   }
 
   const before = latestRunId(token, repo);
   say(`latest run before dispatch: ${before || "(none)"}`);
   process.stdout.write(`dispatching ${stack} session on ${repo}...\n`);
   dispatch(token, repo, branch, {
-    stack, os, distro, user: username, password, mask: String(mask),
+    stack, os, distro, user: username, password, mask: Boolean(mask),
     duration_minutes: duration, packages, autosave_minutes: autosave,
   });
 
@@ -210,4 +259,4 @@ async function run(argv, cfg, store) {
   }
 }
 
-module.exports = { run };
+module.exports = { run, installFiles };
