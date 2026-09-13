@@ -61,7 +61,8 @@ What we did about it:
 Every push to the default branch auto-starts a **10-minute `ide` session**
 to verify the tunnels. Reports (URLs redacted) land on the
 [`giecko-reports`](https://github.com/Seigh-sword/Giecko/tree/giecko-reports)
-branch. To skip: put `[skip giecko]` in your commit message.
+branch, plus a status comment on the commit itself. To skip: put `[skip giecko]`
+in your commit message. For a fast 1-minute check instead of 10: `[quick]`.
 
 ## ⚠️ The fine print
 

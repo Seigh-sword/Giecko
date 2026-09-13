@@ -64,17 +64,25 @@ tunnel_url() { # $1=logfile → prints first trycloudflare URL or empty
   grep -oE 'https://[A-Za-z0-9.-]+\.trycloudflare\.com' "$1" 2>/dev/null | head -n 1 || true
 }
 
-redact() { # stdin→stdout, scrub password + tunnel hostnames (for published reports)
+redact() { # stdin→stdout, scrub password (+base64 forms ttyd logs!) + tunnel hostnames
+  local b64_userpass="" b64_pw=""
+  if [ -n "$PASSWORD" ] && command -v base64 >/dev/null 2>&1; then
+    b64_userpass=$(printf '%s:%s' "$USER" "$PASSWORD" | base64 2>/dev/null | tr -d '\n' || true)
+    b64_pw=$(printf '%s' "$PASSWORD" | base64 2>/dev/null | tr -d '\n' || true)
+  fi
   if command -v python3 >/dev/null 2>&1; then
-    GIECKO_PW="$PASSWORD" python3 -c '
+    GIECKO_PW="$PASSWORD" GIECKO_B64A="$b64_userpass" GIECKO_B64B="$b64_pw" python3 -c '
 import sys, os, re
 d = sys.stdin.read()
-pw = os.environ.get("GIECKO_PW", "")
-if pw: d = d.replace(pw, "REDACTED")
+for k in ("GIECKO_PW", "GIECKO_B64A", "GIECKO_B64B"):
+    v = os.environ.get(k, "")
+    if v: d = d.replace(v, "REDACTED")
+d = re.sub(r"credential:\s*\S+", "credential: REDACTED", d)
 d = re.sub(r"https://[A-Za-z0-9.-]+\.trycloudflare\.com", "https://REDACTED.trycloudflare.com", d)
 sys.stdout.write(d)'
   else
-    sed -E 's|https://[A-Za-z0-9.-]+\.trycloudflare\.com|https://REDACTED.trycloudflare.com|g'
+    sed -E -e 's|https://[A-Za-z0-9.-]+\.trycloudflare\.com|https://REDACTED.trycloudflare.com|g' \
+             -e 's|credential:\s*\S+|credential: REDACTED|g'
   fi
 }
 
