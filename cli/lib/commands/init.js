@@ -16,6 +16,14 @@ function validRepo(v) {
   return /^[^/\s]+\/[^/\s]+$/.test(v || "");
 }
 
+function validDuration(v) {
+  return /^\d+$/.test(v || "") && Number(v) >= 1 && Number(v) <= 360;
+}
+
+function validAutosave(v) {
+  return /^\d+$/.test(v || "");
+}
+
 function listRepos(token) {
   const j = ghApiJson(token, "user/repos?per_page=100&sort=updated");
   return j.map((r) => r.full_name);
@@ -51,6 +59,9 @@ async function run(argv, cfg, store) {
     ["mode", "str", null],
     ["mask", "bool", false],
     ["no-mask", "bool", false],
+    ["duration", "str", null],
+    ["packages", "str", null],
+    ["autosave", "str", null],
     ["accept-terms", "bool", false],
     ["force", "bool", false],
   ]);
@@ -169,7 +180,21 @@ async function run(argv, cfg, store) {
   if (mask === null && interactive()) mask = await askConfirm("Mask the tunnel hostname in output", false);
   if (mask === null) mask = false;
 
-  const out = { version: 1, repo, account: account || null, username, authEnabled: authOn, os, distro, mode, mask };
+  let duration = f.duration;
+  if (!duration && interactive()) duration = await askText("Session length in minutes (1-360)", "180", (v) => (validDuration(v) ? undefined : "enter a number 1-360"));
+  duration = duration || "180";
+  if (!validDuration(duration)) throw new Error(`bad --duration "${duration}" (want 1-360)`);
+
+  let packages = f.packages;
+  if ((packages === null || packages === undefined) && interactive()) packages = await askText("Extra system packages (space-separated, blank = none)", "");
+  packages = packages || "";
+
+  let autosave = f.autosave;
+  if (!autosave && interactive()) autosave = await askText("Autosave every N minutes (0 = off)", "15", (v) => (validAutosave(v) ? undefined : "enter 0 or more"));
+  autosave = autosave || "15";
+  if (!validAutosave(autosave)) throw new Error(`bad --autosave "${autosave}" (want 0 or more)`);
+
+  const out = { version: 1, repo, account: account || null, username, authEnabled: authOn, os, distro, mode, mask, duration, packages, autosave };
   if (fs.existsSync(".giecko.json") && !f.force) {
     if (!interactive()) throw new Error(".giecko.json exists (use --force to overwrite)");
     const ok = await askConfirm(".giecko.json exists. Overwrite", false);

@@ -34,6 +34,9 @@ init:
     --distro D            runner | ubuntu | debian | fedora | arch | alpine
     --mode M              cli | ide (default: ide; single session link)
     --mask | --no-mask    hide the tunnel hostname in output (default: off)
+    --duration MIN        session length 1-360 minutes (default: 180)
+    --packages LIST       extra system packages, space-separated
+    --autosave MIN        snapshot every N min, 0 = off (default: 15)
     --accept-terms        accept the Giecko terms without prompting
     --force               overwrite an existing .giecko.json
 

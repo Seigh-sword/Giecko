@@ -8,6 +8,7 @@ const { ensureAccepted } = require("../terms");
 const { sleepMs, parseReport, isMissing, waitFor, realUrl, showQr } = require("../report");
 
 const PUT_HINT = "Token needs Contents read+write on this repo (classic PAT: the repo scope; fine-grained PAT: Contents write). Also check branch rulesets on the default branch.";
+const NO_PASSWORD = "__BLANK__";
 
 function readConfig(path) {
   if (!fs.existsSync(path)) return {};
@@ -185,6 +186,8 @@ async function run(argv, cfg, store) {
   const duration = String(pick(f.duration, conf.duration, "180"));
   const packages = String(pick(f.packages, conf.packages, ""));
   const autosave = String(pick(f.autosave, conf.autosave, "15"));
+  if (!/^\d+$/.test(duration) || Number(duration) < 1 || Number(duration) > 360) throw new Error(`bad duration "${duration}" (want 1-360)`);
+  if (!/^\d+$/.test(autosave)) throw new Error(`bad autosave "${autosave}" (want 0 or more)`);
   if (os !== "ubuntu-latest" && os !== "macos-latest") throw new Error(`bad os "${os}"`);
   if (!["runner", "ubuntu", "debian", "fedora", "arch", "alpine"].includes(distro)) throw new Error(`bad distro "${distro}"`);
   if (os === "macos-latest" && distro !== "runner") throw new Error("docker distros need Linux; macOS forces distro=runner");
@@ -223,7 +226,7 @@ async function run(argv, cfg, store) {
   say(`latest run before dispatch: ${before || "(none)"}`);
   process.stdout.write(`dispatching ${stack} session on ${repo}...\n`);
   dispatch(token, repo, branch, {
-    stack, os, distro, user: username, password, mask: Boolean(mask),
+    stack, os, distro, user: username, password: authOn ? password : NO_PASSWORD, mask: Boolean(mask),
     duration_minutes: duration, packages, autosave_minutes: autosave,
   });
 

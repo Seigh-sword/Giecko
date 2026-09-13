@@ -14,7 +14,8 @@ giecko launch
 `giecko init` creates a `.giecko.json` session config: repository (existing
 or newly created, any org, public or private), username, password on/off,
 runner OS, Linux distro, mode (cli = terminal link, ide = VS Code link),
-and hostname masking. Accepts the Giecko terms on first run.
+hostname masking, session length, extra packages, and autosave interval.
+Accepts the Giecko terms on first run.
 
 `giecko launch` installs the Giecko workflow into the repository if needed,
 dispatches a session, waits until the tunnels are live, then prints the
