@@ -15,11 +15,17 @@ on:
         description: 'Extra apt packages to install (space-separated, e.g. "neovim golang")'
         required: false
         default: ''
+  # TEMPORARY self-test trigger: lets CI verify itself on push.
+  # Remove before release (or keep with [skip giecko] guard). See TESTING below.
+  push:
+    branches: [arena/01a09a7b-giecko]
 
 run-name: 🦎 Giecko session
 
 jobs:
   terminal:
+    # push events can opt out via "[skip giecko]" in the commit message
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip giecko]')
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -29,4 +35,4 @@ jobs:
       - name: Start Giecko virtual terminal
         run: |
           chmod +x scripts/giecko.sh
-          ./scripts/giecko.sh "${{ inputs.password }}" "${{ inputs.duration_minutes }}" "${{ inputs.packages }}"
+          ./scripts/giecko.sh "${{ inputs.password || 'test-giecko-123' }}" "${{ inputs.duration_minutes || '10' }}" "${{ inputs.packages || '' }}"
