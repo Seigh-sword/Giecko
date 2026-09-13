@@ -147,7 +147,7 @@ _publish_report_inner() { # runs in subshell; ERR trap is reset there
     echo "- status: **$status** ${note:+($note)}"
     echo "- time_utc: $(date -u '+%Y-%m-%d %H:%M:%S')"
     echo "- os: $OSNAME, stack: $STACK, distro: $DISTRO (effective: $DISTRO_EFF)"
-    echo "- user: $USER, mask: $MASK, duration_min: $DURATION_MIN, autosave_min: $AUTOSAVE_MIN"
+    echo "- user: $USER, auth: $([ -n "$PASSWORD" ] && echo "on" || echo "OFF (open)"), mask: $MASK, duration_min: $DURATION_MIN, autosave_min: $AUTOSAVE_MIN"
     echo "- region: ${REGION:-unknown}, egress_ip: ${EGRESS_IP:-?}"
     echo "- boot_seconds: ${BOOT_SECS:-$((SECONDS - BOOT_START))}, heartbeats: $HEARTBEATS"
     echo "- url_terminal: $([ -n "$URL_TERM" ] && pub_url "$URL_TERM" || echo "NO")"
