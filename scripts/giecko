@@ -1,0 +1,71 @@
+#!/bin/bash
+# 🦎 giecko CLI — info, urls, save. Installed to PATH by scripts/giecko.sh
+set -e
+
+[ -f /etc/giecko.env ] && . /etc/giecko.env
+[ -f "$HOME/.giecko.env" ] && . "$HOME/.giecko.env"
+
+CMD="${1:-help}"
+QUIET=0
+[[ "${*:-}" == *--quiet* ]] && QUIET=1
+say() { [ "$QUIET" = 1 ] || echo "$@"; }
+
+cmd_help() {
+  cat <<'HELP'
+🦎 giecko — your pocket toolkit
+
+  giecko info          show run id, region, stack, workspace
+  giecko urls          show the browser URLs for this session
+  giecko save          snapshot the workspace to branch giecko-saves/run-<id>
+
+File transfer (in the terminal):
+  tsz <file>           download a file to your browser (progress bar!)
+  trz                  upload files from your browser (file picker)
+  sz <file> / rz       ZMODEM fallback if trzsz is missing
+
+Tips:
+  - your shell runs in tmux: closing the tab is safe, reopen the URL
+  - typing feels slow? use the vscode URL — the editor types instantly
+HELP
+}
+
+cmd_info() {
+  echo "🦎 run:       ${GIECKO_RUN_ID:-?}"
+  echo "   region:    ${GIECKO_REGION:-?}"
+  echo "   stack:     ${GIECKO_STACK:-?}"
+  echo "   user:      ${GIECKO_USER:-giecko}"
+  echo "   workspace: ${GITHUB_WORKSPACE:-$PWD}"
+}
+
+cmd_urls() {
+  echo "🖥️  terminal: ${GIECKO_URL_TERM:-"(see the Actions run summary)"}"
+  [ -n "${GIECKO_URL_CODE:-}" ] && echo "💻 vscode:    $GIECKO_URL_CODE"
+}
+
+cmd_save() {
+  local repo br
+  if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -d "$GITHUB_WORKSPACE/.git" ]; then
+    repo="$GITHUB_WORKSPACE"
+  else
+    repo="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
+  fi
+  [ -n "$repo" ] && [ -d "$repo/.git" ] || { say "❌ not inside a git repo, nothing to save"; exit 1; }
+  br="giecko-saves/run-${GIECKO_RUN_ID:-${GITHUB_RUN_ID:-local}}"
+  git -C "$repo" config user.email >/dev/null 2>&1 || git -C "$repo" config user.email "giecko@local"
+  git -C "$repo" config user.name >/dev/null 2>&1 || git -C "$repo" config user.name "giecko"
+  git -C "$repo" checkout -q -B "$br" 2>/dev/null || { say "❌ could not switch to save branch"; exit 1; }
+  git -C "$repo" add -A
+  # never commit our own runtime files (logs may contain the password!)
+  if [ -d "$repo/.giecko" ]; then git -C "$repo" reset -q -- .giecko 2>/dev/null || true; fi
+  if git -C "$repo" diff --cached --quiet; then say "✅ nothing new to save"; return 0; fi
+  git -C "$repo" commit -qm "💾 giecko save $(date -u '+%Y-%m-%d %H:%M UTC')" || { say "❌ commit failed"; exit 1; }
+  git -C "$repo" push -q -f -u origin "$br" 2>/dev/null || { say "❌ push failed (no token or no permission?)"; exit 1; }
+  say "💾 saved → branch \`$br\`"
+}
+
+case "$CMD" in
+  info) cmd_info ;;
+  urls) cmd_urls ;;
+  save) cmd_save ;;
+  *) cmd_help ;;
+esac

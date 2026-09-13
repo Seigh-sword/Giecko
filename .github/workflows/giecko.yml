@@ -3,22 +3,34 @@ name: 🦎 Giecko Terminal
 on:
   workflow_dispatch:
     inputs:
+      stack:
+        description: 'Stack: "ide" = terminal + VS Code, "terminal" = terminal only (faster boot)'
+        required: false
+        default: 'ide'
+        type: choice
+        options: [ide, terminal]
       password:
-        description: 'Terminal password (blank = NO auth, anyone with the link gets in)'
+        description: 'Login password (blank = NO auth, anyone with the link gets in)'
         required: false
         default: 'giecko'
       duration_minutes:
-        description: 'How long to keep the terminal alive (max 360 = 6h, GitHub limit)'
+        description: 'How long to keep alive (max 360 = 6h, GitHub limit)'
         required: false
         default: '180'
       packages:
         description: 'Extra apt packages to install (space-separated, e.g. "neovim golang")'
         required: false
         default: ''
-  # TEMPORARY self-test trigger: lets CI verify itself on push.
-  # Remove before release (or keep with [skip giecko] guard). See TESTING below.
+      autosave_minutes:
+        description: 'Snapshot workspace to giecko-saves/ branch every N min (0 = off)'
+        required: false
+        default: '15'
+  # Self-test: every push auto-starts a 10-min session to verify the tunnel.
   push:
     branches: [arena/01a09a7b-giecko]
+
+permissions:
+  contents: write # needed for giecko save + run reports
 
 run-name: 🦎 Giecko session
 
@@ -30,9 +42,9 @@ jobs:
     timeout-minutes: 360
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Start Giecko virtual terminal
+      - name: Start Giecko virtual environment
         run: |
-          chmod +x scripts/giecko.sh
-          ./scripts/giecko.sh "${{ inputs.password || 'test-giecko-123' }}" "${{ inputs.duration_minutes || '10' }}" "${{ inputs.packages || '' }}"
+          chmod +x scripts/giecko.sh scripts/giecko
+          ./scripts/giecko.sh "${{ inputs.password || 'test-giecko-123' }}" "${{ inputs.duration_minutes || '10' }}" "${{ inputs.packages || '' }}" "${{ inputs.stack || 'ide' }}" "${{ inputs.autosave_minutes || '0' }}"

@@ -1,83 +1,101 @@
 # 🦎 Giecko
 
-**Turn GitHub Actions into a virtual Linux terminal you open in your browser.**
+**Turn GitHub Actions into a virtual dev environment you open in your browser.**
 
-Dispatch a workflow → it boots a runner, opens a Cloudflare Quick Tunnel
-(`https://something.trycloudflare.com`) → you visit the URL → you have a
-real Linux shell. That's it. That's the whole crazy idea. And it works.
+Dispatch a workflow → it boots a runner, opens Cloudflare tunnels
+(`https://something.trycloudflare.com`) → you visit the URL → you have
+a real Linux **terminal** + **VS Code**. That's it. That's the crazy idea.
+And it works.
 
 ```
- You (browser) ──https──▶ *.trycloudflare.com ──tunnel──▶ cloudflared ──▶ ttyd ──▶ bash (in tmux)
-                                ▲                                          ▲
+ You (browser) ──https──▶ *.trycloudflare.com ──tunnel──▶ cloudflared ─┬─▶ ttyd ──▶ bash (in tmux)
+                                ▲                                      └─▶ code-server ──▶ VS Code
                           free, no account                      GitHub Actions runner
-                          needed, random URL                    (ubuntu-latest, ~6h max)
+                          needed, random URLs                   (ubuntu, ~6h max)
 ```
 
 ## 🚀 Use it
 
 1. Go to the **Actions** tab → **🦎 Giecko Terminal** → **Run workflow**
-2. Pick a **password** (default: `giecko`), a **duration** (default 180 min, max 360),
-   and optional extra `apt` packages
-3. Wait ~30–60s, then grab the URL from:
-   - the job summary at the top of the run, **or**
-   - the big `🦎 GIECKO IS LIVE!` banner in the logs
-4. Open `https://<random>.trycloudflare.com` in your browser, log in with
-   user `giecko` + your password → **you're in a Linux terminal** 🎉
+2. Pick a **stack** (`ide` = terminal + VS Code, `terminal` = terminal only),
+   a **password**, a **duration** (default 180 min, max 360),
+   optional extra `apt` packages, and autosave interval
+3. Wait ~2–3 min, then grab the URLs from the job summary or the
+   big `🦎 GIECKO IS LIVE!` banner in the logs
+4. Open the links, log in with user `giecko` + your password → **you're in** 🎉
+   - 🖥️ **terminal** — full Linux shell (runs in tmux: closing the tab is safe)
+   - 💻 **vscode** — real VS Code in the browser, repo folder already open
+
+## ⌨️ "Typing feels slow" — read this
+
+Every keystroke in the raw terminal round-trips from you → the runner
+(often US/EU) → back. From India that's ~300ms per key. Physics. 🌍
+
+What we did about it:
+- The runner's **region is shown** at boot, so you know what you're dealing with
+- **Use the VS Code URL for coding** — Monaco buffers keystrokes locally,
+  so typing feels instant while execution stays remote. This is the real fix.
+- Prefer **paste over typing** for big blobs, and keep sessions short-lived
+
+## 🧰 Inside the box
+
+| Thing | Details |
+|---|---|
+| Shell | `bash` in `tmux`, 🦎 prompt, `ll` / `gs` / `save` aliases |
+| Languages | `gcc`, `python3`, `node` preinstalled; `apt install` anything live |
+| Tools | `git`, `tmux`, `htop`, `tree`, `jq`, `zip`, `sqlite3`, `fastfetch` |
+| `giecko` CLI | `giecko urls` · `giecko info` · **`giecko save`** (snapshot workspace to `giecko-saves/run-<id>`) |
+| Autosave | workspace snapshotted every N min (default 15, `0` = off) + once at shutdown |
+| File transfer | `tsz file.zip` = download, `trz` = upload (drag-drop works too), `sz`/`rz` fallback |
+| QR codes | scan the log to open sessions on your phone 📱 |
 
 ## 🖥️ Try it locally (no Actions needed)
 
-The same script runs on any Linux box:
-
 ```bash
-./scripts/giecko.sh mysecret 60
-# → opens a trycloudflare.com URL to a terminal on YOUR machine
+./scripts/giecko.sh mysecret 60 "" ide 0
+# → opens trycloudflare.com URLs to a terminal + VS Code on YOUR machine
 ```
-
-## ✨ Why it's cool
-
-- **Zero setup** — no SSH keys, no firewall rules, no Cloudflare account
-- **Runs anywhere** — any GitHub repo, any laptop, any VPS
-- **Persistent-ish shell** — the terminal runs inside `tmux`, so closing the
-  browser tab doesn't kill your work; just reopen the URL
-- **Customizable** — install anything via the `packages` input or just `apt install` live
-
-## ⚠️ The fine print (read this)
-
-- **It's public by URL.** Anyone who guesses/gets the random tunnel URL can
-  reach the login prompt — always set a strong password. Blank password =
-  literally a public shell. Don't do that unless it's a throwaway.
-- **Ephemeral.** Runners die after max ~6 hours (`timeout-minutes: 360` is a
-  GitHub limit) and the disk is wiped. `git push` your work or it never happened.
-- **Play nice.** This uses GitHub's free runners + Cloudflare's free quick
-  tunnels. Great for hacking around, learning Linux, demos, and "holy crap it
-  works" moments. Not a free VPS replacement — heavy/abusive use will get
-  rate-limited or ToS'd.
-- **Quick tunnel URLs change every run.** They're random `trycloudflare.com`
-  subdomains. Want a stable URL? That's the roadmap (named tunnels + a domain).
-
-## 🗺️ Roadmap
-
-- [ ] One-click **VS Code in browser** mode (`code-server`) alongside the terminal
-- [ ] **File browser** mode for uploads/downloads
-- [ ] Optional **named tunnel** (stable URL via your own Cloudflare account)
-- [ ] QR code in the summary for opening on your phone
-- [ ] `giecko` CLI: `giecko up --password ...` that dispatches the workflow via `gh`
 
 ## 🧪 Self-test on push
 
-Every push to the default branch auto-starts a **10-minute test session**
-(same workflow, throwaway password) — that way the tunnel is verified working
-on every change. To skip it, put `[skip giecko]` in your commit message.
+Every push to the default branch auto-starts a **10-minute `ide` session**
+to verify the tunnels. Reports (URLs redacted) land on the
+[`giecko-reports`](https://github.com/Seigh-sword/Giecko/tree/giecko-reports)
+branch. To skip: put `[skip giecko]` in your commit message.
+
+## ⚠️ The fine print
+
+- **It's public by URL.** Always set a strong password. Blank password =
+  literally a public shell + public VS Code. Don't.
+- **Ephemeral.** Runners die after max ~6h and the disk is wiped.
+  `giecko save` (or autosave) is your friend — but it's a backup branch,
+  not magic. Push real work to a real branch.
+- **Play nice.** Free GitHub runners + free Cloudflare tunnels. Great for
+  hacking, learning, demos, and "holy crap it works" moments — not a VPS.
+- **Tunnel URLs change every run.** Stable URL = named tunnel + own domain (roadmap).
+
+## 🗺️ Roadmap
+
+- [x] VS Code in browser
+- [x] File up/download (`trzsz`/`sz`)
+- [x] `giecko save` + autosave
+- [x] Self-test on push with published reports
+- [ ] Optional **named tunnel** (stable URL via your own Cloudflare account)
+- [ ] `giecko` CLI: dispatch/resume sessions via `gh` (`giecko up`, `giecko ls`)
+- [ ] Pick runner region (needs self-hosted runners — the true lag fix)
 
 ## 🧩 How it works
 
 | Piece | What it does |
 |---|---|
-| [`.github/workflows/giecko.yml`](.github/workflows/giecko.yml) | Manual-dispatch workflow, keeps the runner alive up to 6h |
-| [`scripts/giecko.sh`](scripts/giecko.sh) | Installs `ttyd` + `cloudflared`, starts them, prints the URL, heartbeats |
-| [`ttyd`](https://github.com/tsl0922/ttyd) | Exposes a real `bash` (in `tmux`) as a web terminal on `localhost:7681` |
-| [`cloudflared`](https://github.com/cloudflare/cloudflared) | Quick Tunnel: exposes that port as `https://*.trycloudflare.com`, no account needed |
+| [`.github/workflows/giecko.yml`](.github/workflows/giecko.yml) | Manual dispatch + push self-test, keeps runner alive up to 6h |
+| [`scripts/giecko.sh`](scripts/giecko.sh) | Installs everything in parallel, starts services, opens tunnels, heartbeats, publishes reports |
+| [`scripts/giecko`](scripts/giecko) | On-box CLI: `info`, `urls`, `save` |
+| [`ttyd`](https://github.com/tsl0922/ttyd) | Real `bash` in `tmux` as a WebGL terminal on `:7681` |
+| [`code-server`](https://github.com/coder/code-server) | Real VS Code on `:8080` |
+| [`cloudflared`](https://github.com/cloudflare/cloudflared) | Quick Tunnels: each port → `https://*.trycloudflare.com`, no account |
+| [`trzsz`](https://trzsz.github.io/) + `lrzsz` | File transfer straight through the terminal |
 
 ---
 
-Built on a crazy idea at 4pm on a Sunday. 🦎
+Built on a crazy idea on a Sunday. Made good on the same Sunday. 🦎
