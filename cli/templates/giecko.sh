@@ -539,7 +539,7 @@ fi
 echo "💡 code feels laggy in raw terminal? Use the vscode URL — the editor types instantly."
 echo ""
 
-echo "::notice::giecko-live term=$DISP_TERM code=${DISP_CODE:-none} boot=${BOOT_SECS}s region=$REGION stack=$STACK distro=$DISTRO_EFF run=$RUN_ID"
+echo "::notice::giecko-live term=${DISP_TERM:-none} code=${DISP_CODE:-none} boot=${BOOT_SECS}s region=$REGION stack=$STACK distro=$DISTRO_EFF auth=$([ -n "$PASSWORD" ] && echo on || echo OFF) run=$RUN_ID"
 
 if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
   {
