@@ -33,8 +33,9 @@ function runStatus(token, repo, runId) {
   }
 }
 
-function waitFor(token, repo, runId, timeoutMs) {
+function waitFor(token, repo, runId, timeoutMs, verbose) {
   const started = Date.now();
+  let tick = 0;
   while (Date.now() - started < timeoutMs) {
     try {
       const j = ghApiJson(token, `repos/${repo}/contents/reports/run-${runId}.md?ref=giecko-reports`);
@@ -44,6 +45,8 @@ function waitFor(token, repo, runId, timeoutMs) {
     }
     const st = runStatus(token, repo, runId);
     if (st === "completed" || st === "gone") return { found: false, ended: true };
+    tick++;
+    if (verbose) process.stdout.write(`report poll ${tick}: not yet (run ${st || "unknown"})\n`);
     sleepMs(10000);
   }
   return { found: false, ended: false };

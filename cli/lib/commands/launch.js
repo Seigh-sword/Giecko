@@ -1,10 +1,12 @@
 const fs = require("fs");
 const { parse } = require("../flags");
 const { tokenFor } = require("../store");
-const { haveGh, ghApiJson, openBrowser } = require("../run");
+const { haveGh, ghApiJson, ghPutJson, openBrowser } = require("../run");
 const { loadAll } = require("../templates");
 const { ensureAccepted } = require("../terms");
 const { sleepMs, parseReport, isMissing, waitFor, realUrl, showQr } = require("../report");
+
+const PUT_HINT = "Token needs Contents read+write on this repo (classic PAT: the repo scope; fine-grained PAT: Contents write). Also check branch rulesets on the default branch.";
 
 function readConfig(path) {
   if (!fs.existsSync(path)) return {};
@@ -13,6 +15,16 @@ function readConfig(path) {
 
 function repoDefaultBranch(token, repo) {
   return ghApiJson(token, `repos/${repo}`).default_branch;
+}
+
+function branchExists(token, repo, branch) {
+  try {
+    ghApiJson(token, `repos/${repo}/branches/${encodeURIComponent(branch)}`);
+    return true;
+  } catch (e) {
+    if (isMissing(e)) return false;
+    throw e;
+  }
 }
 
 function fileSha(token, repo, branch, repoPath) {
@@ -25,13 +37,18 @@ function fileSha(token, repo, branch, repoPath) {
   }
 }
 
-function putFile(token, repo, branch, repoPath, body, sha) {
-  const fields = { message: `giecko: install ${repoPath}`, content: Buffer.from(body).toString("base64"), branch };
-  if (sha) {
-    fields.sha = sha;
-    fields.message = `giecko: update ${repoPath}`;
+function putFile(token, repo, branch, useBranch, repoPath, body, sha) {
+  const payload = {
+    message: `${sha ? "giecko: update" : "giecko: install"} ${repoPath}`,
+    content: Buffer.from(body).toString("base64"),
+  };
+  if (sha) payload.sha = sha;
+  if (useBranch) payload.branch = branch;
+  try {
+    ghPutJson(token, `repos/${repo}/contents/${repoPath}`, payload);
+  } catch (e) {
+    throw new Error(`could not write ${repoPath}: ${e.message}\n${PUT_HINT}`);
   }
-  ghApiJson(token, `repos/${repo}/contents/${repoPath}`, fields, "PUT");
 }
 
 function latestRunId(token, repo) {
@@ -78,8 +95,12 @@ async function run(argv, cfg, store) {
     ["no-open", "bool", false],
     ["accept-terms", "bool", false],
     ["dry-run", "bool", false],
+    ["verbose", "bool", false],
   ]);
   if (!haveGh()) throw new Error("need the GitHub CLI: https://cli.github.com");
+  const say = (m) => {
+    if (f.verbose) process.stdout.write(m + "\n");
+  };
 
   const conf = readConfig(f.config);
   const pick = (flagVal, confVal, def) => (flagVal === null || flagVal === undefined ? (confVal === undefined ? def : confVal) : flagVal);
@@ -125,15 +146,21 @@ async function run(argv, cfg, store) {
   await ensureAccepted(cfg, store, f["accept-terms"]);
 
   const branch = repoDefaultBranch(token, repo);
+  say(`default branch: ${branch}`);
+  const branchLive = branchExists(token, repo, branch);
+  say(`branch exists (has commits): ${branchLive}`);
   if (!f["skip-install"]) {
     const templates = loadAll(token);
+    say(`templates source: ${templates[0].source}`);
     for (const t of templates) {
+      process.stdout.write(`checking ${t.repoPath}...\n`);
       const cur = fileSha(token, repo, branch, t.repoPath);
       if (!cur) {
-        putFile(token, repo, branch, t.repoPath, t.body, null);
+        say(`missing, uploading (${t.body.length} chars)`);
+        putFile(token, repo, branch, branchLive, t.repoPath, t.body, null);
         process.stdout.write(`installed ${t.repoPath} (${t.source})\n`);
       } else if (cur.body !== t.body && f.reinstall) {
-        putFile(token, repo, branch, t.repoPath, t.body, cur.sha);
+        putFile(token, repo, branch, true, t.repoPath, t.body, cur.sha);
         process.stdout.write(`updated ${t.repoPath}\n`);
       } else if (cur.body !== t.body) {
         process.stdout.write(`kept ${t.repoPath} (differs; use --reinstall to overwrite)\n`);
@@ -144,6 +171,7 @@ async function run(argv, cfg, store) {
   }
 
   const before = latestRunId(token, repo);
+  say(`latest run before dispatch: ${before || "(none)"}`);
   process.stdout.write(`dispatching ${stack} session on ${repo}...\n`);
   dispatch(token, repo, branch, {
     stack, os, distro, user: username, password, mask: String(mask),
@@ -154,12 +182,13 @@ async function run(argv, cfg, store) {
   for (let i = 0; i < 12; i++) {
     sleepMs(5000);
     runId = latestRunId(token, repo);
+    say(`run poll ${i + 1}: ${runId || "(none yet)"}`);
     if (runId && runId !== before) break;
   }
   if (!runId || runId === before) throw new Error("dispatched, but the new run is not visible yet. Check the Actions tab.");
   process.stdout.write(`run id: ${runId}\n`);
 
-  const rep = waitFor(token, repo, runId, 360000);
+  const rep = waitFor(token, repo, runId, 360000, f.verbose);
   if (!rep.found && rep.ended) throw new Error(`run ${runId} ended without publishing a report. Check the Actions tab for failures.`);
   if (!rep.found) throw new Error(`run ${runId} is still not live after 6 minutes. Check the Actions tab.`);
   const r = parseReport(rep.text);

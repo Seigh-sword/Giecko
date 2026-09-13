@@ -49,6 +49,7 @@ launch:
     --reinstall           overwrite Giecko files in the repo
     --open | --no-open    open the session URL in a browser (default: open)
     --dry-run             print the plan without touching anything
+    --verbose             print each install/dispatch/poll step
 
 ls / watch:
   list recent sessions and save branches, or wait for one run to go live.
