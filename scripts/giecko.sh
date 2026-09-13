@@ -445,7 +445,11 @@ while [ "$SECONDS" -lt "$END" ]; do
   sleep 60
 done
 
-echo "⏰ time's up (${DURATION_MIN} min). Final backup..."
+if [ "${DURATION_MIN:-1}" = "0" ]; then
+  echo "⚡ quick check done (tunnels verified, shutting down)."
+else
+  echo "⏰ time's up (${DURATION_MIN} min). Final backup..."
+fi
 command -v giecko >/dev/null 2>&1 && giecko save --quiet || true
 publish_report completed "$HEARTBEATS heartbeats" || true
 echo "Bye! 🦎"

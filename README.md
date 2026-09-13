@@ -56,6 +56,26 @@ What we did about it:
 # → opens trycloudflare.com URLs to a terminal + VS Code on YOUR machine
 ```
 
+## 💻 Laptop CLI: `giecko up`
+
+Don't like clicking? Dispatch sessions from your terminal:
+
+```bash
+# one-time: put the CLI on your PATH (from your Giecko clone)
+cp scripts/giecko ~/.local/bin/giecko
+
+giecko up                                    # dispatch ide stack, 180 min
+giecko up --stack terminal --duration 60     # terminal only, 1 hour
+giecko up --password s3cret --packages "go"  # custom password + packages
+giecko ls                                    # recent sessions + save branches
+```
+
+`giecko up` dispatches the workflow, waits till the tunnels are live
+(reads the run's published report), prints the region/boot status, and opens
+the run page where the tunnel URLs live. Needs the
+[GitHub CLI](https://cli.github.com) logged in with the `workflow` scope
+(`gh auth refresh -s workflow` if dispatch says 403).
+
 ## 🧪 Self-test on push
 
 Every push to the default branch auto-starts a **10-minute `ide` session**
