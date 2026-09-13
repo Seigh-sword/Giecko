@@ -143,6 +143,8 @@ echo "   autosave  : $([ "${AUTOSAVE_MIN:-0}" -gt 0 ] 2>/dev/null && echo "every
 echo "   extras    : ${EXTRA_PKGS:-none}"
 echo "   run_id    : $RUN_ID"
 [ -n "$PASSWORD" ] && echo "::add-mask::$PASSWORD" 2>/dev/null || true
+# 🔬 env probe: proves what the runner actually provides (token shown as LENGTH only)
+echo "::notice::giecko-env ACTIONS=${GITHUB_ACTIONS:-EMPTY} TOKEN_LEN=${#GITHUB_TOKEN} REPO=${GITHUB_REPOSITORY:-EMPTY} EVENT=${GITHUB_EVENT_NAME:-EMPTY} SHA=${GITHUB_SHA:-EMPTY}"
 
 REGION=$(curl -s -m 5 -H Metadata:true 'http://169.254.169.254/metadata/instance/compute/location?api-version=2021-02-01&format=text' 2>/dev/null | grep -oE '^[a-z0-9-]+$' | head -c 32 || true)
 [ -n "$REGION" ] || REGION="unknown"
@@ -391,7 +393,17 @@ if [ -n "${GITHUB_OUTPUT:-}" ]; then
   [ -n "$URL_CODE" ] && echo "url_code=$URL_CODE" >> "$GITHUB_OUTPUT"
 fi
 
+echo "::notice::giecko-live term=$([ -n "$URL_TERM" ] && echo YES || echo NO) code=$([ -n "$URL_CODE" ] && echo YES || echo NO) boot=${BOOT_SECS}s region=$REGION stack=$STACK run=$RUN_ID"
 publish_report live "booted in ${BOOT_SECS}s" || true
+
+# Secondary status channel: comment on the commit (push self-tests only).
+# Needs no git clone — pure API call, immune to whatever haunts git.
+if [ "${GITHUB_EVENT_NAME:-}" = "push" ] && [ -n "${GITHUB_TOKEN:-}" ] && [ -n "$REPO_SLUG" ] && [ -n "${GITHUB_SHA:-}" ]; then
+  ( GH_TOKEN="$GITHUB_TOKEN" gh api "repos/$REPO_SLUG/commits/$GITHUB_SHA/comments" \
+      -f body="🦎 Giecko self-test **live** (run \`$RUN_ID\`): terminal=$([ -n "$URL_TERM" ] && echo YES || echo NO) · vscode=$([ -n "$URL_CODE" ] && echo YES || echo NO) · boot=${BOOT_SECS}s · region=$REGION · stack=$STACK" \
+      >/dev/null 2>&1 \
+    && echo "::notice::giecko-comment posted" || echo "::warning::giecko-comment failed (non-fatal)" ) || true
+fi
 
 # ---------------------------------------------------------------- autosave
 if [ "${AUTOSAVE_MIN:-0}" -gt 0 ] 2>/dev/null && command -v giecko >/dev/null 2>&1; then

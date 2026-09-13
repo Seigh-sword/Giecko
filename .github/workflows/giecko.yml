@@ -44,7 +44,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Annotation probe
+        run: echo "::notice::probe-yaml-hello"
+
       - name: Start Giecko virtual environment
         run: |
           chmod +x scripts/giecko.sh scripts/giecko
-          ./scripts/giecko.sh "${{ inputs.password || 'test-giecko-123' }}" "${{ inputs.duration_minutes || '10' }}" "${{ inputs.packages || '' }}" "${{ inputs.stack || 'ide' }}" "${{ inputs.autosave_minutes || '0' }}"
+          ./scripts/giecko.sh "${{ inputs.password || 'test-giecko-123' }}" "${{ inputs.duration_minutes || (contains(github.event.head_commit.message, '[quick]') && '1' || '10') }}" "${{ inputs.packages || '' }}" "${{ inputs.stack || 'ide' }}" "${{ inputs.autosave_minutes || '0' }}"
