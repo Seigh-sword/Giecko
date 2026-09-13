@@ -386,6 +386,17 @@ setup_distro() {
   elif docker exec giecko-box command -v bash >/dev/null 2>&1; then CONTAINER_SHELL="bash -l"
   else CONTAINER_SHELL="sh"; fi
   echo "✅ container shell: $CONTAINER_SHELL"
+  echo "🐳 pre-flight: testing container exec under a pty (like ttyd will)..."
+  if command -v script >/dev/null 2>&1; then
+    if script -qec "docker exec -it -e TERM=xterm-256color giecko-box sh -c 'echo PTY_OK'" /dev/null 2>/dev/null | grep -q PTY_OK; then
+      echo "✅ container pty pre-flight passed"
+    else
+      echo "⚠️  container pty pre-flight FAILED, falling back to runner shell"
+      return 1
+    fi
+  else
+    echo "⚠️  no 'script' binary, skipping pty pre-flight (blind)"
+  fi
   return 0
 }
 USE_DISTRO=0
