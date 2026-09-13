@@ -146,8 +146,15 @@ echo "   run_id    : $RUN_ID"
 # 🔬 env probe: proves what the runner actually provides (token shown as LENGTH only)
 echo "::notice::giecko-env ACTIONS=${GITHUB_ACTIONS:-EMPTY} TOKEN_LEN=${#GITHUB_TOKEN} REPO=${GITHUB_REPOSITORY:-EMPTY} EVENT=${GITHUB_EVENT_NAME:-EMPTY} SHA=${GITHUB_SHA:-EMPTY}"
 
-REGION=$(curl -s -m 5 -H Metadata:true 'http://169.254.169.254/metadata/instance/compute/location?api-version=2021-02-01&format=text' 2>/dev/null | grep -oE '^[a-z0-9-]+$' | head -c 32 || true)
-[ -n "$REGION" ] || REGION="unknown"
+# Where is this runner? (Azure IMDS is blocked on hosted runners, so geo-IP it.)
+REGION="unknown"
+if GEO_JSON=$(curl -s -m 8 'http://ip-api.com/json/?fields=status,countryCode,regionName' 2>/dev/null); then
+  if echo "$GEO_JSON" | grep -q '"status":"success"'; then
+    GEO_CC=$(echo "$GEO_JSON" | grep -o '"countryCode":"[^"]*"' | cut -d'"' -f4 || true)
+    GEO_RG=$(echo "$GEO_JSON" | grep -o '"regionName":"[^"]*"' | cut -d'"' -f4 || true)
+    [ -n "$GEO_CC" ] && REGION="$GEO_CC${GEO_RG:+/$GEO_RG}"
+  fi
+fi
 EGRESS_IP=$(curl -s -m 5 https://api.ipify.org 2>/dev/null || echo "?")
 echo "   region    : $REGION (runner) — if that's far from you, that's the typing lag. Physics! 🌍"
 echo ""

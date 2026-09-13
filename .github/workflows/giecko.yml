@@ -40,9 +40,15 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip giecko]')
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # NOT auto-exported; reports/save need it
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Dirty workspace (push self-test only, exercises giecko save)
+        if: github.event_name == 'push'
+        run: echo "save-test $GITHUB_RUN_ID @ $(date -u)" > .giecko-save-test.txt
 
       - name: Annotation probe
         run: echo "::notice::probe-yaml-hello"
