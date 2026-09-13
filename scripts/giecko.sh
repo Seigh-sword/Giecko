@@ -82,7 +82,15 @@ publish_report() { # $1 = live|completed|failed, $2 = note
   [ "${GITHUB_ACTIONS:-}" = "true" ] || return 0
   [ -n "${GITHUB_TOKEN:-}" ] || { echo "⚠️  no GITHUB_TOKEN, skipping report publish"; return 0; }
   [ -n "$REPO_SLUG" ] || { echo "⚠️  no GITHUB_REPOSITORY, skipping report publish"; return 0; }
-  ( _publish_report_inner "$@" ) || echo "⚠️  report publish failed (non-fatal)"
+  local out
+  if out=$( ( _publish_report_inner "$@" ) 2>&1 ); then
+    echo "$out"
+    echo "::notice::giecko report [$1]: term=$([ -n "$URL_TERM" ] && echo YES || echo NO) code=$([ -n "$URL_CODE" ] && echo YES || echo NO) boot=$((SECONDS - BOOT_START))s heartbeats=$HEARTBEATS"
+  else
+    out="${out//$GITHUB_TOKEN/REDACTED}"
+    echo "::warning::giecko report publish failed ($1): ${out:0:500}"
+    echo "⚠️  report publish failed (non-fatal): ${out:0:300}"
+  fi
 }
 _publish_report_inner() { # runs in subshell; ERR trap is reset there
   local status="$1" note="$2"
