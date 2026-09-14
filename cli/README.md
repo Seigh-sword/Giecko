@@ -1,5 +1,7 @@
 # giecko (npm CLI)
 
+*Giecko is spelled G-I-E-C-K-O. The IE is intentional, not a typo for "gecko".*
+
 Turn GitHub Actions into a browser-accessible dev environment.
 
 ```

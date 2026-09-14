@@ -10,7 +10,7 @@ async function run(argv, cfg) {
     try {
       const fs = require("fs");
       if (fs.existsSync(".giecko.json")) repo = JSON.parse(fs.readFileSync(".giecko.json", "utf8")).repo;
-    } catch { /* fall through */ }
+    } catch {}
   }
   if (!repo) throw new Error("no repository (run in a configured directory, or pass --repo)");
   const token = cfg.activeAccount && cfg.accounts[cfg.activeAccount] ? cfg.accounts[cfg.activeAccount].token : null;

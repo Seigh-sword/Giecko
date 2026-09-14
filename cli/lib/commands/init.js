@@ -1,7 +1,7 @@
 const fs = require("fs");
 const crypto = require("crypto");
 const { parse } = require("../flags");
-const { interactive, needTTY, pick, askText, askSecret, askConfirm, intro, outro } = require("../ui");
+const { interactive, pick, askText, askSecret, askConfirm, outro } = require("../ui");
 const { tokenFor } = require("../store");
 const { ghApiJson } = require("../run");
 const { ensureAccepted } = require("../terms");
@@ -144,14 +144,15 @@ async function run(argv, cfg, store) {
     os = await pick("Runner OS", [
       { value: "ubuntu-latest", label: "Ubuntu (recommended)" },
       { value: "macos-latest", label: "macOS (experimental)" },
+      { value: "windows-latest", label: "Windows (beta)" },
     ]);
   }
   os = os || "ubuntu-latest";
-  if (os !== "ubuntu-latest" && os !== "macos-latest") throw new Error(`bad --os "${os}"`);
+  if (os !== "ubuntu-latest" && os !== "macos-latest" && os !== "windows-latest") throw new Error(`bad --os "${os}"`);
 
   let distro = f.distro;
-  if (os === "macos-latest") {
-    if (distro && distro !== "runner") throw new Error("docker distros need Linux; macOS forces distro=runner");
+  if (os === "macos-latest" || os === "windows-latest") {
+    if (distro && distro !== "runner") throw new Error("docker distros need Linux (macOS and Windows force distro=runner)");
     distro = "runner";
   } else if (!distro && interactive()) {
     distro = await pick("Shell environment", [

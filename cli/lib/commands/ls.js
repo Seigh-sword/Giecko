@@ -10,7 +10,7 @@ function resolveRepo(cfg, flagRepo) {
       const repo = JSON.parse(fs.readFileSync(".giecko.json", "utf8")).repo;
       if (repo) return repo;
     }
-  } catch { /* fall through */ }
+  } catch {}
   if (!haveGh()) throw new Error("need the GitHub CLI: https://cli.github.com");
   return ghRaw(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"], null);
 }

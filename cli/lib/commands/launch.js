@@ -188,9 +188,9 @@ async function run(argv, cfg, store) {
   const autosave = String(pick(f.autosave, conf.autosave, "15"));
   if (!/^\d+$/.test(duration) || Number(duration) < 1 || Number(duration) > 360) throw new Error(`bad duration "${duration}" (want 1-360)`);
   if (!/^\d+$/.test(autosave)) throw new Error(`bad autosave "${autosave}" (want 0 or more)`);
-  if (os !== "ubuntu-latest" && os !== "macos-latest") throw new Error(`bad os "${os}"`);
+  if (os !== "ubuntu-latest" && os !== "macos-latest" && os !== "windows-latest") throw new Error(`bad os "${os}"`);
   if (!["runner", "ubuntu", "debian", "fedora", "arch", "alpine"].includes(distro)) throw new Error(`bad distro "${distro}"`);
-  if (os === "macos-latest" && distro !== "runner") throw new Error("docker distros need Linux; macOS forces distro=runner");
+  if ((os === "macos-latest" || os === "windows-latest") && distro !== "runner") throw new Error("docker distros need Linux (macOS and Windows force distro=runner)");
   if (!["cli", "ide"].includes(mode) && !f.stack) throw new Error(`bad mode "${mode}"`);
   const stack = f.stack || (mode === "cli" ? "terminal" : "vscode");
   if (!["terminal", "ide", "vscode"].includes(stack)) throw new Error(`bad stack "${stack}"`);

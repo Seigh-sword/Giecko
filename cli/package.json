@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "sync": "node scripts/sync-templates.js",
+    "check": "node scripts/check.js",
     "prepublishOnly": "npm run sync"
   },
   "dependencies": {

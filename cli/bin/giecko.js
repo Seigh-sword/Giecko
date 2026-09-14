@@ -30,7 +30,7 @@ init:
     --username NAME       session login (default: giecko)
     --auth | --no-auth    session password on/off (default: off)
     --password PW         session password (empty = generate)
-    --os OS               ubuntu-latest | macos-latest (default: ubuntu-latest)
+    --os OS               ubuntu-latest | macos-latest | windows-latest (beta) (default: ubuntu-latest)
     --distro D            runner | ubuntu | debian | fedora | arch | alpine
     --mode M              cli | ide (default: ide; single session link)
     --mask | --no-mask    hide the tunnel hostname in output (default: off)

@@ -1,5 +1,7 @@
 # 🦎 Giecko
 
+*Giecko is spelled G-I-E-C-K-O. The IE is intentional, not a typo for "gecko".*
+
 **Turn GitHub Actions into a virtual dev environment you open in your browser.**
 
 Dispatch a workflow → it boots a runner, opens Cloudflare tunnels
@@ -104,6 +106,7 @@ masked), plus a status comment on the commit. Control via commit message:
 | `[distro=ubuntu]` (or debian/fedora/arch/alpine) | test that container |
 | `[mask]` | test masked output |
 | `[os=macos]` | test the macOS runner (experimental) |
+| `[os=windows]` | test the Windows runner (beta) |
 
 ## ⚠️ The fine print
 
