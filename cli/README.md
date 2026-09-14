@@ -19,7 +19,9 @@ Accepts the Giecko terms on first run.
 
 `giecko launch` installs the Giecko workflow into the repository if needed,
 dispatches a session, waits until the tunnels are live, then prints the
-session URL with a QR code and opens it in a browser.
+session URL with a QR code and opens it in a browser. Each session gets
+its own `giecko-work/run-<id>` branch with the project files; the runner
+itself lives elsewhere, so anything in the editor is safe to delete.
 
 `giecko ls` lists recent sessions and save branches. `giecko watch <run-id>`
 waits for one run to go live.

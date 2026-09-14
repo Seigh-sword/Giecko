@@ -18,6 +18,7 @@ function parseReport(text) {
     boot: field(text, "boot_seconds"),
     term: field(text, "url_terminal"),
     code: field(text, "url_code"),
+    work: field(text, "work_branch"),
   };
 }
 

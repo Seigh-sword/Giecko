@@ -63,23 +63,17 @@ cmd_urls() {
 cmd_save() {
   if [ "$IN_SESSION" = 0 ]; then say "❌ giecko save only works inside a session (it would push a junk branch from here)"; exit 1; fi
   local repo br
-  if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -d "$GITHUB_WORKSPACE/.git" ]; then
-    repo="$GITHUB_WORKSPACE"
-  else
-    repo="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
-  fi
+  repo="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
   [ -n "$repo" ] && [ -d "$repo/.git" ] || { say "❌ not inside a git repo, nothing to save"; exit 1; }
-  br="giecko-saves/run-${GIECKO_RUN_ID:-${GITHUB_RUN_ID:-local}}"
+  br="$(git -C "$repo" branch --show-current 2>/dev/null || echo "")"
+  [ -n "$br" ] || { say "❌ detached HEAD, nothing to save"; exit 1; }
   git -C "$repo" config user.email >/dev/null 2>&1 || git -C "$repo" config user.email "giecko@local"
   git -C "$repo" config user.name >/dev/null 2>&1 || git -C "$repo" config user.name "giecko"
-  git -C "$repo" checkout -q -B "$br" 2>/dev/null || { say "❌ could not switch to save branch"; exit 1; }
   git -C "$repo" add -A
-  # never commit our own runtime files (logs may contain the password!)
-  if [ -d "$repo/.giecko" ]; then git -C "$repo" reset -q -- .giecko 2>/dev/null || true; fi
   if git -C "$repo" diff --cached --quiet; then say "✅ nothing new to save"; return 0; fi
   git -C "$repo" commit -qm "💾 giecko save $(date -u '+%Y-%m-%d %H:%M UTC')" || { say "❌ commit failed"; exit 1; }
-  git -C "$repo" push -q -f -u origin "$br" 2>/dev/null || { say "❌ push failed (no token or no permission?)"; exit 1; }
-  say "💾 saved → branch \`$br\`"
+  git -C "$repo" push -q -u origin "$br" 2>/dev/null || { say "❌ push failed (no token or no permission?)"; exit 1; }
+  say "💾 saved → branch `$br`"
 }
 
 # ---------------------------------------------------------------- laptop

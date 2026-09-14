@@ -43,7 +43,7 @@ on:
         required: false
         default: ''
       autosave_minutes:
-        description: 'Snapshot workspace to giecko-saves/ branch every N min (0 = off)'
+        description: 'Snapshot the session work branch every N min (0 = off)'
         required: false
         default: '15'
   # Self-test: every push auto-verifies. Flags via commit message:
@@ -71,10 +71,6 @@ jobs:
 
       - name: Annotation probe
         run: echo "::notice::probe-yaml-hello"
-
-      - name: Dirty workspace (push self-test only, exercises giecko save)
-        if: github.event_name == 'push'
-        run: echo "save-test $GITHUB_RUN_ID @ $(date -u)" > .giecko-save-test.txt
 
       - name: Start Giecko virtual environment
         run: |

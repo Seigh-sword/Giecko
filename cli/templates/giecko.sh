@@ -152,6 +152,7 @@ _publish_report_inner() { # runs in subshell; ERR trap is reset there
     echo "- boot_seconds: ${BOOT_SECS:-$((SECONDS - BOOT_START))}, heartbeats: $HEARTBEATS"
     echo "- url_terminal: $([ -n "$URL_TERM" ] && pub_url "$URL_TERM" || echo "NO")"
     echo "- url_code: $([ -n "$URL_CODE" ] && pub_url "$URL_CODE" || echo "NO")"
+    echo "- work_branch: $WORK_BRANCH"
     echo "- versions: $(cloudflared --version 2>/dev/null | head -n 1) / $([ "$NEED_TTYD" = 1 ] && ttyd --version 2>/dev/null || echo "ttyd: n/a") / $([ "$CODE_OK" = 1 ] && "$CODE_BIN" --version 2>/dev/null | head -n 1 || echo "code-server: n/a")"
     for f in ttyd.log term-tunnel.log code-server.log code-tunnel.log distro-setup.log; do
       if [ -f "$RUNDIR/$f" ]; then
@@ -362,6 +363,28 @@ EOF
 }
 install_shell_candy || true
 
+# ------------------------------------------------------- session work branch
+WORK_BRANCH="giecko-work/run-$RUN_ID"
+WORKDIR="${RUNNER_TEMP:-/tmp}/giecko-work"
+echo "\U0001f33f work branch: $WORK_BRANCH"
+if [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -n "${GITHUB_TOKEN:-}" ] && [ -n "$REPO_SLUG" ]; then
+  rm -rf "$WORKDIR"
+  _AUTH_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO_SLUG}.git"
+  if git clone -q --depth 1 "$_AUTH_URL" "$WORKDIR" 2>"$RUNDIR/work-clone.log" \
+     && ( cd "$WORKDIR" && git checkout -q -b "$WORK_BRANCH" && git push -q -u origin "$WORK_BRANCH" ) 2>>"$RUNDIR/work-clone.log"; then
+    echo "\u2705 work branch ready"
+  else
+    tail -n 5 "$RUNDIR/work-clone.log" 2>/dev/null | sed "s/${GITHUB_TOKEN}/REDACTED/g" || true
+    fail "work branch setup failed"
+  fi
+  unset _AUTH_URL
+else
+  mkdir -p "$WORKDIR"
+fi
+if [ "${GITHUB_EVENT_NAME:-}" = "push" ]; then
+  echo "save-test $RUN_ID @ $(date -u)" > "$WORKDIR/.giecko-save-test.txt"
+fi
+
 # ------------------------------------------------------- distro container
 setup_distro() {
   local img setup
@@ -377,7 +400,7 @@ setup_distro() {
   docker info >/dev/null 2>&1 || { echo "⚠️  docker daemon unreachable"; return 1; }
   echo "🐳 starting $DISTRO container ($img)..."
   docker rm -f giecko-box >/dev/null 2>&1 || true
-  docker run -d --name giecko-box -w /work -v "$WORKSPACE:/work" "$img" sleep infinity > "$RUNDIR/distro-cid" 2> "$RUNDIR/distro-run.log" \
+  docker run -d --name giecko-box -w /work -v "$WORKDIR:/work" "$img" sleep infinity > "$RUNDIR/distro-cid" 2> "$RUNDIR/distro-run.log" \
     || { echo "⚠️  docker run failed:"; tail -n 5 "$RUNDIR/distro-run.log" || true; return 1; }
   echo "🐳 provisioning container shell (tmux + curl)..."
   docker exec giecko-box sh -c "$setup" > "$RUNDIR/distro-setup.log" 2>&1 \
@@ -432,8 +455,10 @@ if [ "$NEED_TTYD" = 1 ]; then
   echo "🖥️  starting ttyd on :$TERM_PORT (cmd: $SHELL_CMD)..."
   rm -f "$RUNDIR"/ttyd.log "$RUNDIR"/ttyd.pid
   # shellcheck disable=SC2086
+  _TTYD_PWD="$PWD"; cd "$WORKDIR"
   nohup ttyd "${TTYD_OPTS[@]}" $SHELL_CMD > "$RUNDIR/ttyd.log" 2>&1 &
   echo "$!" > "$RUNDIR/ttyd.pid"
+  cd "$_TTYD_PWD"
   echo "⏳ waiting for ttyd..."
   up=0
   for _ in $(seq 1 20); do http_up "$TERM_PORT" "${CURL_AUTH[@]}" && { up=1; break; }; sleep 1; done
@@ -447,10 +472,10 @@ if [ "$NEED_CODE" = 1 ]; then
   rm -f "$RUNDIR"/code-server.log "$RUNDIR"/code.pid
   if [ -n "$PASSWORD" ]; then
     PASSWORD="$PASSWORD" nohup "$CODE_BIN" --bind-addr "127.0.0.1:$CODE_PORT" \
-      --auth password --disable-telemetry "$WORKSPACE" > "$RUNDIR/code-server.log" 2>&1 &
+      --auth password --disable-telemetry "$WORKDIR" > "$RUNDIR/code-server.log" 2>&1 &
   else
     nohup "$CODE_BIN" --bind-addr "127.0.0.1:$CODE_PORT" \
-      --auth none --disable-telemetry "$WORKSPACE" > "$RUNDIR/code-server.log" 2>&1 &
+      --auth none --disable-telemetry "$WORKDIR" > "$RUNDIR/code-server.log" 2>&1 &
   fi
   echo "$!" > "$RUNDIR/code.pid"
   echo "⏳ waiting for code-server..."
@@ -524,6 +549,7 @@ cat <<EOF
  👤  login: $LOGIN_LINE
  🌍  runner region: $REGION — typing lag ≈ your distance to here
  🐧  shell: $DISTRO_EFF on $OSNAME · stack: $STACK
+ 📁  files: branch '$WORK_BRANCH'
  ⏱️   alive ~${DURATION_MIN} min · 💾 backup: run 'giecko save' (autosave: $([ "${AUTOSAVE_MIN:-0}" -gt 0 ] 2>/dev/null && echo "every ${AUTOSAVE_MIN}m" || echo "off"))
 ============================================================
 EOF
@@ -539,7 +565,7 @@ fi
 echo "💡 code feels laggy in raw terminal? Use the vscode URL — the editor types instantly."
 echo ""
 
-echo "::notice::giecko-live term=${DISP_TERM:-none} code=${DISP_CODE:-none} boot=${BOOT_SECS}s region=$REGION stack=$STACK distro=$DISTRO_EFF auth=$([ -n "$PASSWORD" ] && echo on || echo OFF) run=$RUN_ID"
+echo "::notice::giecko-live term=${DISP_TERM:-none} code=${DISP_CODE:-none} boot=${BOOT_SECS}s region=$REGION stack=$STACK distro=$DISTRO_EFF auth=$([ -n "$PASSWORD" ] && echo on || echo OFF) run=$RUN_ID work=$WORK_BRANCH"
 
 if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
   {
@@ -565,6 +591,7 @@ if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
       [ -n "$URL_CODE" ] && { echo "VS Code QR:"; echo '```'; qr_block "$URL_CODE"; echo '```'; }
     fi
     echo "💾 Save work with \`giecko save\` · 📥 download files with \`tsz <file>\` · 📤 upload with \`trz\`"
+    echo "📁 Files live on branch \`$WORK_BRANCH\`"
   } >> "$GITHUB_STEP_SUMMARY"
 fi
 if [ -n "${GITHUB_OUTPUT:-}" ]; then
@@ -592,7 +619,7 @@ fi
 
 # ---------------------------------------------------------------- autosave
 if [ "${AUTOSAVE_MIN:-0}" -gt 0 ] 2>/dev/null && command -v giecko >/dev/null 2>&1; then
-  ( while true; do sleep $((AUTOSAVE_MIN * 60)); giecko save --quiet || true; done ) &
+  ( while true; do sleep $((AUTOSAVE_MIN * 60)); ( cd "$WORKDIR" && giecko save --quiet ) || true; done ) &
   echo "$!" > "$RUNDIR/autosave.pid"
   echo "💾 autosave armed (every ${AUTOSAVE_MIN}m)"
 fi
@@ -626,6 +653,6 @@ if [ "${DURATION_MIN:-1}" = "0" ]; then
 else
   echo "⏰ time's up (${DURATION_MIN} min). Final backup..."
 fi
-command -v giecko >/dev/null 2>&1 && giecko save --quiet || true
+command -v giecko >/dev/null 2>&1 && ( cd "$WORKDIR" && giecko save --quiet ) || true
 publish_report completed "$HEARTBEATS heartbeats" || true
 echo "Bye! 🦎"
