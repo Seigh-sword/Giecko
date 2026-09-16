@@ -219,7 +219,7 @@ sys_pkgs() {
   priv apt-get install -y -qq fastfetch 2>/dev/null || true
 }
 fetch() {
-  curl -fsSL --retry 5 --retry-delay 2 --retry-max-time 90 "$@"
+  curl -fsSL --retry 8 --retry-delay 5 --retry-max-time 150 --retry-all-errors "$@"
 }
 dl_cloudflared() {
   command -v cloudflared >/dev/null 2>&1 && return 0
