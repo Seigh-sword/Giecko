@@ -62,6 +62,8 @@ async function run(argv, cfg, store) {
     ["duration", "str", null],
     ["packages", "str", null],
     ["autosave", "str", null],
+    ["cf-token", "str", null],
+    ["random-url", "bool", false],
     ["accept-terms", "bool", false],
     ["force", "bool", false],
   ]);
@@ -177,6 +179,19 @@ async function run(argv, cfg, store) {
   mode = mode || "ide";
   if (mode !== "cli" && mode !== "ide") throw new Error(`bad --mode "${mode}"`);
 
+  let tunnel = f["random-url"] ? "random" : f["cf-token"] ? "named" : null;
+  if (tunnel === null && interactive()) {
+    tunnel = await pick("Session URL naming", [
+      { value: "random", label: "Random (free trycloudflare.com name, zero setup)" },
+      { value: "named", label: "Named (your own domain via a Cloudflare tunnel token)" },
+    ]);
+  }
+  tunnel = tunnel || "random";
+  if (tunnel !== "random" && tunnel !== "named") throw new Error(`bad tunnel "${tunnel}"`);
+  let cfToken = f["cf-token"] || null;
+  if (tunnel === "named" && !cfToken && interactive()) cfToken = await askSecret("Cloudflare tunnel token (Zero Trust -> Networks -> Tunnels)");
+  if (tunnel === "named" && !cfToken) throw new Error("named tunnel needs a Cloudflare tunnel token (--cf-token)");
+
   let mask = f.mask ? true : f["no-mask"] ? false : null;
   if (mask === null && interactive()) mask = await askConfirm("Mask the tunnel hostname in output", false);
   if (mask === null) mask = false;
@@ -195,7 +210,7 @@ async function run(argv, cfg, store) {
   autosave = autosave || "15";
   if (!validAutosave(autosave)) throw new Error(`bad --autosave "${autosave}" (want 0 or more)`);
 
-  const out = { version: 1, repo, account: account || null, username, authEnabled: authOn, os, distro, mode, mask, duration, packages, autosave };
+  const out = { version: 1, repo, account: account || null, username, authEnabled: authOn, os, distro, mode, mask, duration, packages, autosave, tunnel, cfToken: tunnel === "named" ? cfToken : null };
   if (fs.existsSync(".giecko.json") && !f.force) {
     if (!interactive()) throw new Error(".giecko.json exists (use --force to overwrite)");
     const ok = await askConfirm(".giecko.json exists. Overwrite", false);

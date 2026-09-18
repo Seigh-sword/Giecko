@@ -16,11 +16,13 @@ giecko launch
 `giecko init` creates a `.giecko.json` session config: repository (existing
 or newly created, any org, public or private), username, password on/off,
 runner OS, Linux distro, mode (cli = terminal link, ide = VS Code link),
+URL naming (random or your own domain via a Cloudflare tunnel token),
 hostname masking, session length, extra packages, and autosave interval.
 Accepts the Giecko terms on first run.
 
 `giecko launch` installs the Giecko workflow into the repository if needed,
-dispatches a session, waits until the tunnels are live, then prints the
+shows the session plan (mask, URL naming, duration) for review before
+dispatching, waits until the tunnels are live, then prints the
 session URL with a QR code and opens it in a browser. Each session gets
 its own `giecko-work/run-<id>` branch with the project files; the runner
 itself lives elsewhere, so anything in the editor is safe to delete.
@@ -29,6 +31,7 @@ itself lives elsewhere, so anything in the editor is safe to delete.
 waits for one run to go live.
 
 Every interactive prompt has a flag equivalent; see `giecko help`.
+Pass --yes to launch without the review menu.
 Config and tokens live in `~/.config/giecko/config.json` (mode 0600).
 
 Development:

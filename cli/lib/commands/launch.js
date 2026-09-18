@@ -4,6 +4,7 @@ const { parse } = require("../flags");
 const { tokenFor } = require("../store");
 const { haveGh, ghApiJson, openBrowser } = require("../run");
 const { loadAll } = require("../templates");
+const { interactive, pick: menu, askText, askSecret } = require("../ui");
 const { ensureAccepted } = require("../terms");
 const { sleepMs, parseReport, isMissing, waitFor, realUrl, showQr } = require("../report");
 
@@ -162,6 +163,9 @@ async function run(argv, cfg, store) {
     ["no-open", "bool", false],
     ["accept-terms", "bool", false],
     ["dry-run", "bool", false],
+    ["cf-token", "str", null],
+    ["random-url", "bool", false],
+    ["yes", "bool", false],
     ["verbose", "bool", false],
   ]);
   if (!haveGh()) throw new Error("need the GitHub CLI: https://cli.github.com");
@@ -182,8 +186,8 @@ async function run(argv, cfg, store) {
   const os = pick(f.os, conf.os, "ubuntu-latest");
   const distro = pick(f.distro, conf.distro, "runner");
   const mode = pick(f.mode, conf.mode, "ide");
-  const mask = f.mask ? true : f["no-mask"] ? false : conf.mask === undefined ? false : Boolean(conf.mask);
-  const duration = String(pick(f.duration, conf.duration, "180"));
+  let mask = f.mask ? true : f["no-mask"] ? false : conf.mask === undefined ? false : Boolean(conf.mask);
+  let duration = String(pick(f.duration, conf.duration, "180"));
   const packages = String(pick(f.packages, conf.packages, ""));
   const autosave = String(pick(f.autosave, conf.autosave, "15"));
   if (!/^\d+$/.test(duration) || Number(duration) < 1 || Number(duration) > 360) throw new Error(`bad duration "${duration}" (want 1-360)`);
@@ -194,6 +198,13 @@ async function run(argv, cfg, store) {
   if (!["cli", "ide"].includes(mode) && !f.stack) throw new Error(`bad mode "${mode}"`);
   const stack = f.stack || (mode === "cli" ? "terminal" : "vscode");
   if (!["terminal", "ide", "vscode"].includes(stack)) throw new Error(`bad stack "${stack}"`);
+
+  let tunnel = f["random-url"] ? "random" : null;
+  if (tunnel === null && f["cf-token"] !== null && f["cf-token"] !== undefined && f["cf-token"] !== "") tunnel = "named";
+  if (tunnel === null) tunnel = pick(null, conf.tunnel, "random");
+  if (tunnel !== "random" && tunnel !== "named") throw new Error(`bad tunnel "${tunnel}"`);
+  let cfToken = tunnel === "named" ? (f["cf-token"] !== null && f["cf-token"] !== undefined && f["cf-token"] !== "" ? f["cf-token"] : String(conf.cfToken || "")) : "";
+  if (tunnel === "named" && !cfToken) throw new Error("named tunnel needs a Cloudflare tunnel token (--cf-token, or set it in " + "g" + "iecko init)");
 
   let password;
   if (f.password !== null && f.password !== undefined) {
@@ -206,10 +217,49 @@ async function run(argv, cfg, store) {
     password = "";
   }
 
-  const plan = { repo, account: accountName || "(ambient gh auth)", username, authOn, os, distro, mode, stack, mask, duration, packages, autosave };
+  const plan = () => ({ repo, account: accountName || "(ambient gh auth)", username, authOn, os, distro, mode, stack, mask, duration, packages, autosave, tunnel, cfToken: cfToken ? "(set)" : "" });
+  const showPlan = () => {
+    const p = plan();
+    process.stdout.write("\nsession plan:\n");
+    process.stdout.write(`  repo      ${p.repo}\n`);
+    process.stdout.write(`  os        ${p.os} (${p.distro})\n`);
+    process.stdout.write(`  stack     ${p.stack}\n`);
+    process.stdout.write(`  url       ${p.tunnel === "named" ? "named tunnel (hostnames from your Cloudflare dashboard)" : "random trycloudflare.com name"}\n`);
+    process.stdout.write(`  mask      ${p.mask ? "on (hostname hidden in logs)" : "off"}\n`);
+    process.stdout.write(`  auth      ${p.authOn ? "password" : "off (open session)"}\n`);
+    process.stdout.write(`  duration  ${p.duration} min\n`);
+    process.stdout.write(`  autosave  ${p.autosave} min\n`);
+    process.stdout.write(`  packages  ${p.packages || "(none)"}\n\n`);
+  };
+  showPlan();
   if (f["dry-run"]) {
-    process.stdout.write("dry run. Would dispatch with:\n" + JSON.stringify({ ...plan, password: password ? "(set)" : "(blank)" }, null, 2) + "\n");
+    process.stdout.write("dry run. Would dispatch with:\n" + JSON.stringify({ ...plan(), password: password ? "(set)" : "(blank)" }, null, 2) + "\n");
     return;
+  }
+  if (interactive() && !f.yes) {
+    let go = false;
+    while (!go) {
+      const choice = await menu("Review the plan", [
+        { value: "go", label: "Launch now" },
+        { value: "mask", label: `Toggle mask (now ${mask ? "on" : "off"})` },
+        { value: "url", label: `URL naming (now ${tunnel === "named" ? "named tunnel" : "random"})` },
+        { value: "duration", label: `Change duration (now ${duration} min)` },
+        { value: "cancel", label: "Cancel" },
+      ]);
+      if (choice === "go") go = true;
+      else if (choice === "cancel") throw new Error("cancelled");
+      else if (choice === "mask") mask = !mask;
+      else if (choice === "duration") {
+        const v = await askText("Session length in minutes (1-360)", duration, (x) => (/^\d+$/.test(x) && Number(x) >= 1 && Number(x) <= 360 ? undefined : "enter a number 1-360"));
+        if (/^\d+$/.test(v) && Number(v) >= 1 && Number(v) <= 360) duration = String(v);
+      } else if (choice === "url") {
+        if (tunnel === "random") {
+          const tok = await askSecret("Cloudflare tunnel token (blank = stay random)");
+          if (tok) { tunnel = "named"; cfToken = tok; }
+        } else tunnel = "random";
+      }
+      showPlan();
+    }
   }
 
   await ensureAccepted(cfg, store, f["accept-terms"]);
@@ -227,7 +277,7 @@ async function run(argv, cfg, store) {
   process.stdout.write(`dispatching ${stack} session on ${repo}...\n`);
   dispatch(token, repo, branch, {
     stack, os, distro, user: username, password: authOn ? password : NO_PASSWORD, mask: Boolean(mask),
-    duration_minutes: duration, packages, autosave_minutes: autosave,
+    duration_minutes: duration, packages, autosave_minutes: autosave, cf_token: cfToken,
   });
 
   let runId = "";
@@ -245,11 +295,12 @@ async function run(argv, cfg, store) {
   if (!rep.found) throw new Error(`run ${runId} is still not live after 6 minutes. Check the Actions tab.`);
   const r = parseReport(rep.text);
   const wantCode = stack !== "terminal";
-  const url = wantCode ? realUrl(r.code) : realUrl(r.term);
+  const named = /named-tunnel/i.test(r.term || "") || /named-tunnel/i.test(r.code || "");
+  const url = named ? "" : wantCode ? realUrl(r.code) : realUrl(r.term);
   const runPage = `https://github.com/${repo}/actions/runs/${runId}`;
 
   process.stdout.write("\nGIECKO IS LIVE\n");
-  process.stdout.write(`  session : ${url || "(masked - scan the QR in the run logs)"}\n`);
+  process.stdout.write(`  session : ${url || (named ? "named tunnel - open the hostname from your Cloudflare dashboard" : "(masked - scan the QR in the run logs)"}\n`);
   process.stdout.write(`  files   : branch ${r.work || "(see run page)"}\n`);
   process.stdout.write(`  region  : ${r.region}   boot: ${r.boot}s   password: ${password || "(none - open session)"}\n`);
   process.stdout.write(`  run page: ${runPage}\n`);

@@ -34,6 +34,8 @@ init:
     --distro D            runner | ubuntu | debian | fedora | arch | alpine
     --mode M              cli | ide (default: ide; single session link)
     --mask | --no-mask    hide the tunnel hostname in output (default: off)
+    --cf-token TOKEN      use a named Cloudflare tunnel (custom hostname on your domain)
+    --random-url          use a random trycloudflare.com URL (default)
     --duration MIN        session length 1-360 minutes (default: 180)
     --packages LIST       extra system packages, space-separated
     --autosave MIN        snapshot every N min, 0 = off (default: 15)
@@ -41,7 +43,8 @@ init:
     --force               overwrite an existing .giecko.json
 
 launch:
-  install Giecko into the repo if needed, dispatch a session, wait till
+  install Giecko into the repo if needed, show the session plan for
+  review, dispatch the session, wait till
   it is live, print the URL and QR code.
     --config PATH         config file (default: .giecko.json)
     all init options work here as overrides, plus:
@@ -52,6 +55,9 @@ launch:
     --reinstall           overwrite Giecko files in the repo
     --open | --no-open    open the session URL in a browser (default: open)
     --dry-run             print the plan without touching anything
+    --cf-token TOKEN      named Cloudflare tunnel (overrides the config)
+    --random-url          random trycloudflare.com URL (overrides the config)
+    --yes                 skip the interactive plan review
     --verbose             print each install/dispatch/poll step
 
 ls / watch:

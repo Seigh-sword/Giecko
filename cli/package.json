@@ -1,9 +1,9 @@
 {
   "name": "giecko",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Turn GitHub Actions into a browser-accessible dev environment",
   "bin": {
-    "giecko": "bin/giecko.js"
+    "giecko": "./bin/giecko.js"
   },
   "files": [
     "bin",

@@ -24,6 +24,7 @@ And it works.
    - **os**: `ubuntu-latest` (recommended), `macos-latest`, or `windows-latest`
    - **distro**: runner OS directly, or a docker shell: `ubuntu`, `debian`, `fedora`, `arch`, `alpine`
    - **user**, **password** (blank = open session, your funeral), **mask** (streamer mode)
+   - **cf_token** (optional): named Cloudflare tunnel for your own domain
    - **duration** (default 180 min, max 360), extra packages, autosave
 3. Wait ~30–60s, grab the URLs (and square QR codes) from the job summary
 4. Open the links, log in → **you're in** 🎉
@@ -34,7 +35,7 @@ And it works.
 npm install -g giecko
 giecko auth        # save a GitHub token as a named account (little TUI)
 giecko init        # wizard: repo, account, user, auth, OS, distro, mode, mask
-giecko launch      # install into the repo, dispatch, print URL + QR, open it
+giecko launch      # review the plan, install, dispatch, print URL + QR, open it
 giecko ls          # recent sessions + save branches
 ```
 
@@ -59,6 +60,23 @@ Notes: in `vscode`-only mode the editor's integrated terminals run on the
 host even when a distro is set (same files, different shell). Distro shells
 run as root inside the container — install whatever you want, it's all
 thrown away in ≤6h anyway.
+
+## URL naming: random or your own domain
+
+By default every session gets random `*.trycloudflare.com` URLs: free,
+no account needed, new names each run. Want stable URLs on your own
+domain? Bring a Cloudflare named tunnel:
+
+1. Cloudflare Zero Trust -> Networks -> Tunnels -> create a tunnel,
+   copy its token
+2. Route hostnames to it, e.g. `term.example.com -> http://localhost:7681`
+   (terminal) and `code.example.com -> http://localhost:8080` (VS Code)
+3. Pass the token: workflow input `cf_token`, or CLI flag `--cf-token`
+   (also asked by `giecko init`, stored in `.giecko.json`)
+
+One named tunnel serves the whole session; the hostnames are whatever
+you routed in the dashboard. Random URLs stay the default.
+
 
 ## ⌨️ "Typing feels slow" — read this
 
@@ -119,7 +137,7 @@ masked), plus a status comment on the commit. Control via commit message:
   hacking, learning, demos, and "holy crap it works" moments — not a VPS.
   Don't mine crypto, don't be the reason free things get limited.
 - **Tunnel URLs change every run** (unless masked, they're in logs/summary
-  anyway). Stable URL = named tunnel + own domain (roadmap).
+  anyway). Stable URLs on your own domain: see URL naming above.
 - Full terms: [TERMS.md](TERMS.md).
 
 ## 🗺️ Roadmap
@@ -131,9 +149,12 @@ masked), plus a status comment on the commit. Control via commit message:
 - [x] Linux distro choice via docker
 - [x] npm CLI (`auth`/`init`/`launch`)
 - [x] Masked (streamer) mode + square QR codes
-- [ ] Stable URL via named tunnel + your own domain
+- [x] Named tunnel + your own domain (`--cf-token` / `cf_token` input)
 - [ ] macOS runner stable (needs testing)
 - [ ] code-server inside the distro container (one shell everywhere)
+- [ ] Desktop mode: the whole GUI OS in the browser
+- [ ] CLI rewritten in TypeScript
+- [ ] Full plan: [ROADMAP.md](ROADMAP.md)
 - [ ] Pick runner region (needs self-hosted runners — the true lag fix)
 
 ## 🧩 How it works
