@@ -300,7 +300,7 @@ async function run(argv, cfg, store) {
   const runPage = `https://github.com/${repo}/actions/runs/${runId}`;
 
   process.stdout.write("\nGIECKO IS LIVE\n");
-  process.stdout.write(`  session : ${url || (named ? "named tunnel - open the hostname from your Cloudflare dashboard" : "(masked - scan the QR in the run logs)"}\n`);
+  process.stdout.write(`  session : ${url || (named ? "named tunnel - open the hostname from your Cloudflare dashboard" : "(masked - scan the QR in the run logs)")}\n`);
   process.stdout.write(`  files   : branch ${r.work || "(see run page)"}\n`);
   process.stdout.write(`  region  : ${r.region}   boot: ${r.boot}s   password: ${password || "(none - open session)"}\n`);
   process.stdout.write(`  run page: ${runPage}\n`);
