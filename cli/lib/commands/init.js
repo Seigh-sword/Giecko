@@ -143,8 +143,8 @@ async function run(argv, cfg, store) {
   if (!os && interactive()) {
     os = await pick("Runner OS", [
       { value: "ubuntu-latest", label: "Ubuntu (recommended)" },
-      { value: "macos-latest", label: "macOS (experimental)" },
-      { value: "windows-latest", label: "Windows (beta)" },
+      { value: "macos-latest", label: "macOS" },
+      { value: "windows-latest", label: "Windows" },
     ]);
   }
   os = os || "ubuntu-latest";

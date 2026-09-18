@@ -276,7 +276,7 @@ dl_code() {
     if [ "$OSNAME" = "Darwin" ]; then
       echo " trying code-server via brew..."
       brew install code-server 2>/dev/null && { CODE_BIN="$(command -v code-server)"; return 0; }
-      echo "  no macOS code-server found (experimental OS); vscode unavailable"
+      echo "  no macOS code-server found; vscode unavailable"
       return 1
     fi
     echo "  code-server API lookup failed, using pinned v$CODER_VER_FALLBACK"

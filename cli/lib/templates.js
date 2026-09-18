@@ -3,7 +3,7 @@ const path = require("path");
 const { ghApiJson } = require("./run");
 
 function upstream() {
-  return process.env.GIEKO_UPSTREAM || "Seigh-sword/Giecko";
+  return process.env.GIECKO_UPSTREAM || process.env.GIEKO_UPSTREAM || "Seigh-sword/Giecko";
 }
 
 function files() {

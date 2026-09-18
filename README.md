@@ -21,7 +21,7 @@ And it works.
 1. Go to the **Actions** tab → **🦎 Giecko Terminal** → **Run workflow**
 2. Pick your session:
    - **stack**: `ide` (terminal + VS Code), `terminal` (shell only), `vscode` (VS Code only)
-   - **os**: `ubuntu-latest` (recommended) or `macos-latest` (experimental)
+   - **os**: `ubuntu-latest` (recommended), `macos-latest`, or `windows-latest`
    - **distro**: runner OS directly, or a docker shell: `ubuntu`, `debian`, `fedora`, `arch`, `alpine`
    - **user**, **password** (blank = open session, your funeral), **mask** (streamer mode)
    - **duration** (default 180 min, max 360), extra packages, autosave
@@ -52,7 +52,8 @@ Prefer bash? `scripts/giecko` does `up`/`ls`/`watch` the same way —
 |---|---|
 | `runner` | The runner's own OS as your shell (fastest boot, ~25s) |
 | `ubuntu` / `debian` / `fedora` / `arch` / `alpine` | That distro in docker, workspace mounted at `/work`, tmux + curl provisioned (+~30–60s boot) |
-| `macos-latest` | Native macOS runner (experimental, docker distros unavailable) |
+| `macos-latest` | Native macOS runner (docker distros unavailable) |
+| `windows-latest` | Native Windows runner (Git Bash shell, docker distros unavailable) |
 
 Notes: in `vscode`-only mode the editor's integrated terminals run on the
 host even when a distro is set (same files, different shell). Distro shells
@@ -105,8 +106,8 @@ masked), plus a status comment on the commit. Control via commit message:
 | `[stack=terminal]` / `[stack=vscode]` | test a single stack |
 | `[distro=ubuntu]` (or debian/fedora/arch/alpine) | test that container |
 | `[mask]` | test masked output |
-| `[os=macos]` | test the macOS runner (experimental) |
-| `[os=windows]` | test the Windows runner (beta) |
+| `[os=macos]` | test the macOS runner |
+| `[os=windows]` | test the Windows runner |
 
 ## ⚠️ The fine print
 

@@ -1,9 +1,9 @@
 {
   "name": "giecko",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Turn GitHub Actions into a browser-accessible dev environment",
   "bin": {
-    "giecko": "./bin/giecko.js"
+    "giecko": "bin/giecko.js"
   },
   "files": [
     "bin",
@@ -26,6 +26,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Seigh-sword/Giecko.git"
+    "url": "git+https://github.com/Seigh-sword/Giecko.git"
   }
 }
