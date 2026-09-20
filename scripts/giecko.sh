@@ -354,7 +354,8 @@ fi
 if [ -n "${GIECKO_PLUGINS:-}" ]; then
   echo " installing plugins..."
   if command -v npm >/dev/null 2>&1; then
-    npm install -g --silent $GIECKO_PLUGINS 2>/dev/null || echo "  some plugins failed to install"
+    read -ra PLUGIN_PKGS <<< "$GIECKO_PLUGINS"
+    npm install -g --silent "${PLUGIN_PKGS[@]}" 2>/dev/null || echo "  some plugins failed to install"
   else
     echo "  no npm on this runner, plugins skipped"
   fi
@@ -570,7 +571,8 @@ if [ "$STACK" = "desktop" ]; then
     PYBIN=python3
     command -v python3 >/dev/null 2>&1 || PYBIN=python
     "$PYBIN" -m pip install --user --quiet websockify >/dev/null 2>&1 || fail "websockify install failed"
-    export PATH="$("$PYBIN" -c 'import site,os;print(os.path.join(site.USER_BASE,"bin"))'):$PATH"
+    PBINDIR="$("$PYBIN" -c 'import site,os;print(os.path.join(site.USER_BASE,"bin"))')"
+    export PATH="$PBINDIR:$PATH"
     command -v websockify >/dev/null 2>&1 || fail "websockify not found after install"
     NOVNC_DIR="$RUNDIR/novnc-1.4.0"
     if [ ! -d "$NOVNC_DIR" ]; then
@@ -592,7 +594,8 @@ if [ "$STACK" = "desktop" ]; then
     PYBIN=python3
     command -v python3 >/dev/null 2>&1 || PYBIN=python
     "$PYBIN" -m pip install --user --quiet websockify >/dev/null 2>&1 || fail "websockify install failed"
-    export PATH="$("$PYBIN" -c 'import site,os;print(os.path.join(site.USER_BASE,"Scripts") if os.name=="nt" else os.path.join(site.USER_BASE,"bin"))'):$PATH"
+    PBINDIR="$("$PYBIN" -c 'import site,os;print(os.path.join(site.USER_BASE,"Scripts") if os.name=="nt" else os.path.join(site.USER_BASE,"bin"))')"
+    export PATH="$PBINDIR:$PATH"
     command -v websockify >/dev/null 2>&1 || fail "websockify not found after install"
     NOVNC_DIR="$RUNDIR/novnc-1.4.0"
     if [ ! -d "$NOVNC_DIR" ]; then
