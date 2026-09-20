@@ -1,6 +1,6 @@
 {
   "name": "giecko",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Turn GitHub Actions into a browser-accessible dev environment",
   "main": "dist/cli.js",
   "bin": {

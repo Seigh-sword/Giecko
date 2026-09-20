@@ -96,8 +96,11 @@ a machine, not a tab.
 - Works on every runner OS: Linux gets XFCE, macOS and Windows get
   the runner's real desktop over VNC
 - Adds roughly a minute to boot
-- The desktop asks for your session password — type only its **first 8
-  characters** (a VNC protocol limit)
+- The desktop asks for your session password. On **macOS** type the
+  session username and the **full** password — the browser logs into a
+  real macOS account. On **Windows and Linux** (and with external VNC
+  clients on any OS) type only the password's **first 8 characters** (a
+  VNC protocol limit)
 - The screen is 1600x900 and scales to your window
 - The terminal link still works alongside it, and `giecko save`
   snapshots the same workspace

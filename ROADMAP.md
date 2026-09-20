@@ -1,6 +1,6 @@
 # Giecko Roadmap
 
-Where Giecko is headed. Current release: 0.5.0.
+Where Giecko is headed. Current release: 0.5.1.
 
 ## Done
 
@@ -23,6 +23,11 @@ Where Giecko is headed. Current release: 0.5.0.
   checksums for every downloaded binary; desktop favicon (lizard + your
   GitHub avatar); browser reconnect (tmux keeps the shell alive across
   tab crashes); ISC license
+- 0.5.1 - desktop login fixes: the macOS desktop login works (a real
+  runner account, full password through the browser), the Windows
+  desktop connects at all now (TightVNC loopback and password were
+  both broken), and every desktop session self-checks its VNC login at
+  boot (the vnc_auth line in the report)
 
 ## Next
 

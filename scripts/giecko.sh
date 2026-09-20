@@ -812,14 +812,15 @@ if [ "$STACK" = "desktop" ]; then
   elif [ "$OSNAME" = "Darwin" ]; then
     echo "  macOS desktop: enabling the built-in VNC server..."
     echo "  macOS $(sw_vers -productVersion 2>/dev/null || echo unknown)"
-    publish_report diag1 "mac-enter" || true
     KS="/System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart"
     ACCOUNT_PW="$PASSWORD"
     if [ -z "$ACCOUNT_PW" ]; then
-      ACCOUNT_PW="$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 8)"
+      ACCOUNT_PW="$(openssl rand -hex 4 2>/dev/null || true)"
+      if [ -z "$ACCOUNT_PW" ]; then
+        ACCOUNT_PW="$(python3 -c 'import secrets; print(secrets.token_hex(4))' 2>/dev/null || true)"
+      fi
       echo "  auth is off, but macOS still needs a desktop login: $USER / $ACCOUNT_PW"
     fi
-    publish_report diag2 "pwlen=${#ACCOUNT_PW}" || true
     VNC_PW="${ACCOUNT_PW:0:8}"
     DESK_USER_PW="$ACCOUNT_PW"
     if priv sysadminctl -addUser "$USER" -password "$ACCOUNT_PW" -admin >/dev/null 2>&1; then
@@ -830,17 +831,13 @@ if [ "$STACK" = "desktop" ]; then
     else
       echo "  could not create the macOS desktop login; the VNC password still applies"
     fi
-    publish_report diag3 "account-done" || true
     priv "$KS" -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw "$VNC_PW" -restart -agent -privs -all || fail "could not enable the macOS VNC server"
-    publish_report diag4 "kickstart-done" || true
     vup=0
     for _ in {1..30}; do nc -z 127.0.0.1 "$VNC_PORT" 2>/dev/null && { vup=1; break; }; sleep 2; done
     [ "$vup" = 1 ] || fail "macOS VNC server never came up on port $VNC_PORT"
-    publish_report diag5 "vncport-up" || true
     PYBIN=python3
     command -v python3 >/dev/null 2>&1 || PYBIN=python
     "$PYBIN" -m pip install --user --quiet websockify >/dev/null 2>&1 || fail "websockify install failed"
-    publish_report diag6 "pip-done" || true
     WS_CMD=("$PYBIN" -c "from websockify.websocketproxy import websockify_init; websockify_init()")
     NOVNC_DIR="$RUNDIR/novnc-1.4.0"
     if [ ! -d "$NOVNC_DIR" ]; then
@@ -848,7 +845,6 @@ if [ "$STACK" = "desktop" ]; then
       fetch -o "$RUNDIR/novnc.tgz" "https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz" || fail "noVNC download failed"
       tar -xzf "$RUNDIR/novnc.tgz" -C "$RUNDIR" || fail "noVNC extract failed"
     fi
-    publish_report diag7 "novnc-fetched" || true
   elif [ "$IS_WINDOWS" = 1 ]; then
     echo "  windows desktop: installing TightVNC..."
     tvn_args="SET_ALLOWLOOPBACK=1 VALUE_OF_ALLOWLOOPBACK=1"
@@ -867,7 +863,6 @@ if [ "$STACK" = "desktop" ]; then
     PYBIN=python3
     command -v python3 >/dev/null 2>&1 || PYBIN=python
     "$PYBIN" -m pip install --user --quiet websockify >/dev/null 2>&1 || fail "websockify install failed"
-    publish_report diag6 "pip-done" || true
     WS_CMD=("$PYBIN" -c "from websockify.websocketproxy import websockify_init; websockify_init()")
     NOVNC_DIR="$RUNDIR/novnc-1.4.0"
     if [ ! -d "$NOVNC_DIR" ]; then
@@ -879,14 +874,12 @@ if [ "$STACK" = "desktop" ]; then
     fail "desktop mode is not supported on this OS"
   fi
   vnc_selfcheck
-  publish_report diag8 "selfcheck-done" || true
   patch_novnc "$NOVNC_DIR" || echo "  favicon patch skipped"
   nohup "${WS_CMD[@]}" --web "$NOVNC_DIR" "$DESK_PORT" "localhost:$VNC_PORT" > "$RUNDIR/novnc.log" 2>&1 &
   echo "$!" > "$RUNDIR/novnc.pid"
   up=0
   for _ in {1..30}; do http_up "$DESK_PORT" && { up=1; break; }; sleep 1; done
   [ "$up" = 1 ] || { cat "$RUNDIR/novnc.log" || true; fail "noVNC failed to start"; }
-  publish_report diag9 "ws-up" || true
   DESK_OK=1
   echo " desktop is up"
 fi
@@ -985,7 +978,15 @@ EOF
 [ -n "$URL_TERM" ] && echo "    terminal: $DISP_TERM"
 [ -n "$URL_CODE" ] && echo "   vscode:    $DISP_CODE"
 [ -n "$URL_DESK" ] && echo "   desktop:   $DISP_DESK"
-[ -n "$URL_DESK" ] && [ -n "$PASSWORD" ] && echo "   desktop login: type the FIRST 8 characters of your password"
+if [ -n "$URL_DESK" ] && [ "$OSNAME" = "Darwin" ]; then
+  if [ -n "$PASSWORD" ]; then
+    echo "   desktop login: \`$USER\` + the session password (macOS account)"
+  else
+    echo "   desktop login: generated, in the run log above"
+  fi
+elif [ -n "$URL_DESK" ] && [ -n "$PASSWORD" ]; then
+  echo "   desktop login: type the FIRST 8 characters of your password"
+fi
 cat <<EOF
    login: $LOGIN_LINE
    runner region: $REGION — typing lag ≈ your distance to here

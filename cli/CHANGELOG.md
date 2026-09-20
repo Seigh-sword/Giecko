@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.1
+
+- Fixed: the macOS desktop login rejected the right password. The
+  browser uses the macOS login scheme first, which checks a real macOS
+  account - the runner now creates that account with the session
+  username and the full session password. The 8 character VNC limit no
+  longer applies through the browser (external VNC clients still use
+  the first 8 characters)
+- Fixed: the Windows desktop never worked through the browser. TightVNC
+  refuses connections from the same machine by default, which is exactly
+  how the web client reaches it, and the VNC password was never actually
+  set. The runner now enables loopback, sets the password through the
+  installer and restarts the service
+- Fixed: auth-off desktop sessions on macOS never booted (the random
+  password generator hung on macOS). The generator is replaced and the
+  login it makes is printed in the run log
+- New: every desktop session checks its own VNC login at boot (both the
+  classic VNC handshake and the macOS one the browser uses) and reports
+  the result as vnc_auth in the session report
+
 ## 0.5.0
 
 - The CLI is TypeScript now: typed config, flags, API results and session
