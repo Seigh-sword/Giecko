@@ -1,0 +1,4 @@
+*.sh text eol=lf
+scripts/giecko text eol=lf
+cli/bin/giecko.js text eol=lf
+cli/templates/* text eol=lf
