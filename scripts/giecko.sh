@@ -539,6 +539,7 @@ fi
 
 if [ "$STACK" = "desktop" ]; then
   VNC_PW="${PASSWORD:0:8}"
+  WS_CMD=(websockify)
   rm -f "$RUNDIR"/xvfb.log "$RUNDIR"/xfce.log "$RUNDIR"/x11vnc.log "$RUNDIR"/novnc.log "$RUNDIR"/xvfb.pid "$RUNDIR"/xfce.pid "$RUNDIR"/x11vnc.pid "$RUNDIR"/novnc.pid "$RUNDIR"/novnc.tgz
   if [ "$OSNAME" = "Linux" ]; then
     echo "  starting desktop (Xvfb + XFCE + x11vnc + noVNC)..."
@@ -571,9 +572,7 @@ if [ "$STACK" = "desktop" ]; then
     PYBIN=python3
     command -v python3 >/dev/null 2>&1 || PYBIN=python
     "$PYBIN" -m pip install --user --quiet websockify >/dev/null 2>&1 || fail "websockify install failed"
-    PBINDIR="$("$PYBIN" -c 'import site,os;print(os.path.join(site.USER_BASE,"bin"))')"
-    export PATH="$PBINDIR:$PATH"
-    command -v websockify >/dev/null 2>&1 || fail "websockify not found after install"
+    WS_CMD=("$PYBIN" -c "from websockify.websocketproxy import websockify_init; websockify_init()")
     NOVNC_DIR="$RUNDIR/novnc-1.4.0"
     if [ ! -d "$NOVNC_DIR" ]; then
       echo "  fetching noVNC (web client)..."
@@ -594,9 +593,7 @@ if [ "$STACK" = "desktop" ]; then
     PYBIN=python3
     command -v python3 >/dev/null 2>&1 || PYBIN=python
     "$PYBIN" -m pip install --user --quiet websockify >/dev/null 2>&1 || fail "websockify install failed"
-    PBINDIR="$("$PYBIN" -c 'import site,os;print(os.path.join(site.USER_BASE,"Scripts") if os.name=="nt" else os.path.join(site.USER_BASE,"bin"))')"
-    export PATH="$PBINDIR:$PATH"
-    command -v websockify >/dev/null 2>&1 || fail "websockify not found after install"
+    WS_CMD=("$PYBIN" -c "from websockify.websocketproxy import websockify_init; websockify_init()")
     NOVNC_DIR="$RUNDIR/novnc-1.4.0"
     if [ ! -d "$NOVNC_DIR" ]; then
       echo "  fetching noVNC (web client)..."
@@ -606,7 +603,7 @@ if [ "$STACK" = "desktop" ]; then
   else
     fail "desktop mode is not supported on this OS"
   fi
-  nohup websockify --web "$NOVNC_DIR" "$DESK_PORT" "localhost:$VNC_PORT" > "$RUNDIR/novnc.log" 2>&1 &
+  nohup "${WS_CMD[@]}" --web "$NOVNC_DIR" "$DESK_PORT" "localhost:$VNC_PORT" > "$RUNDIR/novnc.log" 2>&1 &
   echo "$!" > "$RUNDIR/novnc.pid"
   up=0
   for _ in {1..30}; do http_up "$DESK_PORT" && { up=1; break; }; sleep 1; done
