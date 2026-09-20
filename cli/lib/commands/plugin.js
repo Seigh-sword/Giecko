@@ -15,11 +15,19 @@ function validPluginId(id) {
 }
 
 async function run(argv, cfg) {
-  const f = parse(argv, [["config", "str", ".giecko.json"], ["i", "bool", false], ["r", "bool", false], ["l", "bool", false], ["list", "bool", false]]);
+  const norm = [];
+  let mode = null;
+  for (const a of argv) {
+    if (a === "-i" || a === "install" || a === "--install") mode = "i";
+    else if (a === "-r" || a === "remove" || a === "--remove") mode = "r";
+    else if (a === "-l" || a === "list" || a === "--list" || a === "ls") mode = "l";
+    else norm.push(a);
+  }
+  const f = parse(norm, [["config", "str", ".giecko.json"]]);
   const conf = readConfig(f.config);
   const plugins = Array.isArray(conf.plugins) ? conf.plugins : [];
-  const mode = f.i ? "i" : f.r ? "r" : "l";
-  if (mode === "l") {
+  const m = mode || "l";
+  if (m === "l") {
     if (!plugins.length) process.stdout.write("no plugins installed. Add one: giecko plugin -i gcko.pkg-<name>\n");
     else plugins.forEach((p) => process.stdout.write(p + "\n"));
     return;
@@ -27,7 +35,7 @@ async function run(argv, cfg) {
   const id = f._[0];
   if (!id) throw new Error("usage: giecko plugin -i <package> | -r <package> | -l");
   if (!validPluginId(id)) throw new Error('invalid id: "' + id + '". plugin packages must be tagged gcko.pkg-<name>');
-  if (mode === "i") {
+  if (m === "i") {
     if (!plugins.includes(id)) plugins.push(id);
     conf.plugins = plugins;
     writeConfig(f.config, conf);

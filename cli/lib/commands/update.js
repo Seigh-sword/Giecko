@@ -34,7 +34,7 @@ async function run(argv, cfg, store) {
     process.stdout.write("auto update check: " + (cfg.autoUpdateCheck ? "on" : "off") + "\n");
     return;
   }
-  const pkg = require("../package.json");
+  const pkg = require("../../package.json");
   const latest = npmLatest();
   if (!latest) process.stdout.write("CLI " + pkg.version + " (could not reach the npm registry)\n");
   else if (newer(latest, pkg.version)) process.stdout.write("CLI update available: " + pkg.version + " -> " + latest + "\n");
