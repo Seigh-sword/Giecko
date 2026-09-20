@@ -29,6 +29,7 @@ CODE_WARNED=0
 NAMED=0
 DESK_OK=0
 VNC_AUTH="not run"
+DESK_USER_PW=""
 OSNAME="$(uname -s)"
 ARCH="amd64"; case "$(uname -m)" in arm64|aarch64) ARCH="arm64";; esac
 IS_WINDOWS=0; case "$OSNAME" in MINGW*|MSYS*|CYGWIN*) IS_WINDOWS=1;; esac
@@ -319,17 +320,19 @@ pip_trzsz() {
 
 sys_pkgs & AP=$!
 vnc_selfcheck() {
-  if [ -z "$VNC_PW" ]; then
+  if [ -z "$VNC_PW" ] && [ -z "$DESK_USER_PW" ]; then
     VNC_AUTH="skipped (no password)"
     return 0
   fi
   local pyn=python3 out=""
   command -v python3 >/dev/null 2>&1 || pyn=python
-  if out=$("$pyn" - "$VNC_PORT" "$VNC_PW" 2>&1 <<'PYEOF'
+  if out=$("$pyn" - "$VNC_PORT" "$VNC_PW" "$USER" "$DESK_USER_PW" 2>&1 <<'PYEOF'
 
-import socket, sys
+import socket, sys, os, hashlib, subprocess
 port = int(sys.argv[1])
-pw = sys.argv[2]
+pw2 = sys.argv[2]
+uname = sys.argv[3]
+pw30 = sys.argv[4]
 import sys
 
 IP = [58,50,42,34,26,18,10,2,60,52,44,36,28,20,12,4,62,54,46,38,30,22,14,6,64,56,48,40,32,24,16,8,57,49,41,33,25,17,9,1,59,51,43,35,27,19,11,3,61,53,45,37,29,21,13,5,63,55,47,39,31,23,15,7]
@@ -413,38 +416,86 @@ def des_ecb(key, data):
                 v = (v << 1) | bit
             out.append(v)
     return bytes(out)
-s = socket.create_connection(("127.0.0.1", port), timeout=10)
-def recvn(n):
-    b = b""
-    while len(b) < n:
-        d = s.recv(n - len(b))
-        if not d:
-            raise SystemExit("eof at %d of %d bytes" % (len(b), n))
-        b += d
-    return b
-ver = recvn(12)
-s.sendall(b"RFB 003.008\n")
-n = recvn(1)[0]
-if n == 0:
-    rl = int.from_bytes(recvn(4), "big")
-    raise SystemExit("server refused: %s" % recvn(rl).decode("utf8", "replace"))
-types = list(recvn(n))
-print("server=%s types=%s" % (ver.decode("latin1").strip(), types))
-if 2 not in types:
-    raise SystemExit("vnc auth (type 2) not offered")
-s.sendall(bytes([2]))
-ch = recvn(16)
-s.sendall(des_ecb(vnc_key(pw), ch))
-res = int.from_bytes(recvn(4), "big")
-if res != 0:
+
+class Conn:
+    def __init__(self):
+        self.s = socket.create_connection(("127.0.0.1", port), timeout=15)
+        self.b = b""
+    def recvn(self, n):
+        while len(self.b) < n:
+            d = self.s.recv(n - len(self.b))
+            if not d:
+                raise SystemExit("eof at %d of %d bytes" % (len(self.b), n))
+            self.b += d
+        out, self.b = self.b[:n], self.b[n:]
+        return out
+    def hello(self):
+        ver = self.recvn(12)
+        self.s.sendall(b"RFB 003.008\n")
+        n = self.recvn(1)[0]
+        if n == 0:
+            rl = int.from_bytes(self.recvn(4), "big")
+            raise SystemExit("server refused: %s" % self.recvn(rl).decode("utf8", "replace"))
+        return ver, list(self.recvn(n))
+
+def reason(c):
     try:
-        rl = int.from_bytes(recvn(4), "big")
+        rl = int.from_bytes(c.recvn(4), "big")
         if rl:
-            print("reason: %s" % recvn(rl).decode("utf8", "replace"))
+            return c.recvn(rl).decode("utf8", "replace")
     except Exception:
         pass
-    raise SystemExit("auth rejected (result %d)" % res)
-print("authenticated")
+    return ""
+
+c = Conn()
+ver, types = c.hello()
+print("server=%s types=%s" % (ver.decode("latin1").strip(), types))
+results = {}
+if 2 in types and pw2:
+    try:
+        c.s.sendall(bytes([2]))
+        ch = c.recvn(16)
+        c.s.sendall(des_ecb(vnc_key(pw2), ch))
+        res = int.from_bytes(c.recvn(4), "big")
+        if res != 0:
+            print("type2 rejected: %s" % reason(c).strip())
+        results[2] = res
+    except SystemExit as e:
+        results[2] = str(e)
+if 30 in types and uname and pw30:
+    try:
+        c2 = Conn()
+        v2, t2 = c2.hello()
+        c2.s.sendall(bytes([30]))
+        g = int.from_bytes(c2.recvn(2), "big")
+        klen = int.from_bytes(c2.recvn(2), "big")
+        prime = int.from_bytes(c2.recvn(klen), "big")
+        spub = int.from_bytes(c2.recvn(klen), "big")
+        e = int.from_bytes(os.urandom(klen), "big")
+        cpub = pow(g, e, prime).to_bytes(klen, "big")
+        shared = pow(spub, e, prime).to_bytes(klen, "big")
+        pad = "".join(chr(65 + b % 26) for b in os.urandom(64))
+        pu = (uname[:63] + "\0" + pad)[:64]
+        pp = (pw30[:63] + "\0" + pad)[:64]
+        creds = (pu + pp).encode("utf8")
+        key = hashlib.md5(shared).digest()
+        r = subprocess.run(["openssl", "enc", "-aes-128-ecb", "-K", key.hex(), "-nopad"], input=creds, capture_output=True)
+        if r.returncode != 0 or len(r.stdout) != 128:
+            raise SystemExit("openssl aes failed")
+        c2.s.sendall(r.stdout)
+        c2.s.sendall(cpub)
+        res = int.from_bytes(c2.recvn(4), "big")
+        if res != 0:
+            print("type30 rejected: %s" % reason(c2).strip())
+        results[30] = res
+    except SystemExit as e:
+        results[30] = str(e)
+print("results=%s" % results)
+need = 30 if 30 in types else 2
+if results.get(need) == 0:
+    print("authenticated (type %d)" % need)
+else:
+    raise SystemExit("auth failed for type %d: %s" % (need, results.get(need, "not tested")))
 PYEOF
   ); then
     VNC_AUTH="ok"
@@ -762,11 +813,22 @@ if [ "$STACK" = "desktop" ]; then
     echo "  macOS desktop: enabling the built-in VNC server..."
     echo "  macOS $(sw_vers -productVersion 2>/dev/null || echo unknown)"
     KS="/System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart"
-    if [ -n "$VNC_PW" ]; then
-      priv "$KS" -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw "$VNC_PW" -restart -agent -privs -all || fail "could not enable the macOS VNC server"
-    else
-      priv "$KS" -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes -restart -agent -privs -all || fail "could not enable the macOS VNC server"
+    ACCOUNT_PW="$PASSWORD"
+    if [ -z "$ACCOUNT_PW" ]; then
+      ACCOUNT_PW="$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 8)"
+      echo "  auth is off, but macOS still needs a desktop login: $USER / $ACCOUNT_PW"
     fi
+    VNC_PW="${ACCOUNT_PW:0:8}"
+    DESK_USER_PW="$ACCOUNT_PW"
+    if priv sysadminctl -addUser "$USER" -password "$ACCOUNT_PW" -admin >/dev/null 2>&1; then
+      echo "  macOS desktop login created: $USER / the session password"
+      if dseditgroup -o read com.apple.access_screensharing >/dev/null 2>&1; then
+        priv dseditgroup -o edit -a "$USER" -t user com.apple.access_screensharing || true
+      fi
+    else
+      echo "  could not create the macOS desktop login; the VNC password still applies"
+    fi
+    priv "$KS" -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw "$VNC_PW" -restart -agent -privs -all || fail "could not enable the macOS VNC server"
     vup=0
     for _ in {1..30}; do nc -z 127.0.0.1 "$VNC_PORT" 2>/dev/null && { vup=1; break; }; sleep 2; done
     [ "$vup" = 1 ] || fail "macOS VNC server never came up on port $VNC_PORT"
