@@ -1,12 +1,13 @@
-const { parse } = require("../flags");
-const { interactive, needTTY, pick, askText, askSecret, intro, outro } = require("../ui");
-const { haveGh, ghAuthOk } = require("../run");
+import { parse, str } from "../flags";
+import { interactive, needTTY, pick, askText, askSecret, intro, outro } from "../ui";
+import { haveGh, ghAuthOk } from "../run";
+import type { Config, Store } from "../store";
 
-function names(cfg) {
+function names(cfg: Config): string[] {
   return Object.keys(cfg.accounts);
 }
 
-function cmdList(cfg) {
+function cmdList(cfg: Config): void {
   const list = names(cfg);
   if (!list.length) {
     process.stdout.write("no accounts yet. Add one: giecko auth add <name> --token TOKEN\n");
@@ -17,7 +18,7 @@ function cmdList(cfg) {
   }
 }
 
-function saveToken(cfg, store, name, token) {
+function saveToken(cfg: Config, store: Store, name: string, token: string): void {
   if (!/^[A-Za-z0-9_.-]{1,64}$/.test(name)) throw new Error("account name: letters, numbers, _ . - (max 64)");
   if (!token) throw new Error("empty token");
   if (!haveGh()) throw new Error("need the GitHub CLI: https://cli.github.com");
@@ -28,7 +29,7 @@ function saveToken(cfg, store, name, token) {
   process.stdout.write(`saved account "${name}"${cfg.activeAccount === name ? " (active)" : ""}\n`);
 }
 
-async function cmdMenu(cfg, store) {
+async function cmdMenu(cfg: Config, store: Store): Promise<void> {
   await intro("giecko auth");
   const action = await pick("Accounts", [
     { value: "use", label: "Use an account" },
@@ -62,7 +63,7 @@ async function cmdMenu(cfg, store) {
   await outro(`removed account: ${name}`);
 }
 
-async function run(argv, cfg, store) {
+export async function run(argv: string[], cfg: Config, store: Store): Promise<void> {
   const f = parse(argv, [["token", "str", null]]);
   const sub = f._[0] || (interactive() ? "menu" : "list");
   const arg = f._[1];
@@ -93,8 +94,13 @@ async function run(argv, cfg, store) {
     return;
   }
   if (sub === "add") {
-    const name = arg || (await (async () => { needTTY("<name>"); return (await askText("Account name", "")).trim(); })());
-    let token = f.token;
+    let name: string;
+    if (arg) name = arg;
+    else {
+      needTTY("<name>");
+      name = await askText("Account name", "");
+    }
+    let token = str(f.token);
     if (!token) {
       needTTY("--token");
       token = (await askSecret("GitHub token (needs repo + workflow scopes)")).trim();
@@ -104,5 +110,3 @@ async function run(argv, cfg, store) {
   }
   throw new Error(`unknown auth command "${sub}" (see: giecko help)`);
 }
-
-module.exports = { run };

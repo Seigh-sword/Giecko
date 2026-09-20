@@ -1,12 +1,19 @@
-const fs = require("fs");
-const path = require("path");
-const { ghApiJson } = require("./run");
+import * as fs from "fs";
+import * as path from "path";
+import { ghApiJson } from "./run";
 
-function upstream() {
+export interface TemplateFile {
+  repoPath: string;
+  bundle: string;
+  body: string;
+  source: string;
+}
+
+export function upstream(): string {
   return process.env.GIECKO_UPSTREAM || process.env.GIEKO_UPSTREAM || "Seigh-sword/Giecko";
 }
 
-function files() {
+export function files(): Array<{ repoPath: string; bundle: string }> {
   return [
     { repoPath: ".github/workflows/giecko.yml", bundle: "giecko.yml" },
     { repoPath: "scripts/giecko.sh", bundle: "giecko.sh" },
@@ -14,20 +21,20 @@ function files() {
   ];
 }
 
-function bundled(name) {
+function bundled(name: string): string {
   return fs.readFileSync(path.join(__dirname, "..", "templates", name), "utf8");
 }
 
-function fetchRemote(token, branch, repoPath) {
+function fetchRemote(token: string | null, branch: string, repoPath: string): string {
   const j = ghApiJson(token, `repos/${upstream()}/contents/${repoPath}?ref=${encodeURIComponent(branch)}`);
   return Buffer.from(j.content, "base64").toString("utf8");
 }
 
-function defaultBranch(token) {
+function defaultBranch(token: string | null): string {
   return ghApiJson(token, `repos/${upstream()}`).default_branch;
 }
 
-function loadAll(token) {
+export function loadAll(token: string | null): TemplateFile[] {
   try {
     const branch = defaultBranch(token);
     return files().map((f) => ({ ...f, body: fetchRemote(token, branch, f.repoPath), source: `remote@${branch}` }));
@@ -35,5 +42,3 @@ function loadAll(token) {
     return files().map((f) => ({ ...f, body: bundled(f.bundle), source: "bundled" }));
   }
 }
-
-module.exports = { files, loadAll };

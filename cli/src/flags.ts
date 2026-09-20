@@ -1,5 +1,12 @@
-function parse(argv, defs) {
-  const out = { _: [] };
+export type FlagKind = "bool" | "str";
+export type FlagDef = [string, FlagKind, string | boolean | null];
+export interface Flags {
+  _: string[];
+  [key: string]: unknown;
+}
+
+export function parse(argv: string[], defs: FlagDef[]): Flags {
+  const out: Flags = { _: [] };
   for (const [name, , def] of defs) out[name] = def;
   let i = 0;
   while (i < argv.length) {
@@ -28,4 +35,10 @@ function parse(argv, defs) {
   return out;
 }
 
-module.exports = { parse };
+export function str(v: unknown): string | null {
+  return v === undefined || v === null ? null : String(v);
+}
+
+export function bool(v: unknown): boolean {
+  return v === true;
+}

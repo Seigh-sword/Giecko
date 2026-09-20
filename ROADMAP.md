@@ -1,7 +1,6 @@
 # Giecko Roadmap
 
-Where Giecko is headed. The big one is 0.5.0, the daily-driver release.
-Current release: 0.4.5.
+Where Giecko is headed. Current release: 0.5.0.
 
 ## Done
 
@@ -17,31 +16,29 @@ Current release: 0.4.5.
   real desktop over VNC); session files update themselves (--nr opts
   out); auto update + `giecko update` / `-upd`; plugins (`gcko.pkg-*`);
   `giecko changelog`; npm package ships the scripts folder
+- 0.5.0 - the whole CLI rewritten in TypeScript (cli/src, compiled to
+  cli/dist); desktop watchdog fix (macOS and Windows sessions no longer
+  die at the first heartbeat); `giecko logs`; session records under
+  `~/.config/giecko/sessions/<run-id>/`; `init --config`; sha256
+  checksums for every downloaded binary; desktop favicon (lizard + your
+  GitHub avatar); browser reconnect (tmux keeps the shell alive across
+  tab crashes); ISC license
 
-## 0.4.0 - foundations (next)
+## Next
 
-- TypeScript CLI: the whole cli/ package rewritten in TypeScript and
-  compiled to plain JavaScript for npm. Same commands, same config,
-  static types to kill whole classes of bugs.
-- Session resume: reconnect a browser to a still-running session after
-  a tab crash without losing the shell.
-- `giecko logs`: tail the runner log from your laptop.
-- Checksums for every binary the runner downloads.
-
-## 0.5.0 - the daily driver
-
-- Region picker: show runner regions before launch and retry until you
-  land close to home.
 - The honest lag fix. A VPN cannot beat the speed of light: typing
   latency is the round trip from you to the runner and back. What
-  actually helps: region choice, local keystroke buffering (the VS Code
-  link already does this), and self-hosted runners near you.
-- Desktop mode with audio and clipboard sync.
+  actually helps: local keystroke buffering (the VS Code link already
+  does this) and self-hosted runners near you.
+- Desktop mode with audio and clipboard sync (the noVNC clipboard panel
+  already syncs text; audio needs a different transport).
 - Persistent home directories between sessions (opt-in).
-- One-command localhost mode, no GitHub at all: `giecko local`.
 - First-class mobile layout for the terminal.
 - Multi-session workspaces: one runner, several named rooms.
 - Release automation: tagged commits publish to npm after tests pass.
+- Replacing the ttyd and code-server favicons too (they are baked into
+  the binaries; needs a fronting proxy).
+- Config directory override (XDG-style) beyond --config.
 
 ## Parked / research
 

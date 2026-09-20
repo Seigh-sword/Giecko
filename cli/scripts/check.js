@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const root = path.join(__dirname, "..");
 const files = [path.join(root, "bin", "giecko.js")];
-for (const d of ["lib", path.join("lib", "commands")]) {
+for (const d of ["dist", path.join("dist", "commands")]) {
   for (const f of fs.readdirSync(path.join(root, d))) {
   if (f.endsWith(".js")) files.push(path.join(root, d, f));
   }

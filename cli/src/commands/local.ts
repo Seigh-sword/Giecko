@@ -1,12 +1,13 @@
-const fs = require("fs");
-const os = require("os");
-const path = require("path");
-const crypto = require("crypto");
-const { spawnSync } = require("child_process");
-const { parse } = require("../flags");
-const { loadAll } = require("../templates");
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import * as crypto from "crypto";
+import { spawnSync } from "child_process";
+import { parse, str, bool } from "../flags";
+import { loadAll } from "../templates";
+import type { Config, Store } from "../store";
 
-async function run(argv, cfg) {
+export async function run(argv: string[], cfg: Config, store: Store): Promise<void> {
   const f = parse(argv, [
     ["stack", "str", "terminal"],
     ["password", "str", null],
@@ -18,10 +19,12 @@ async function run(argv, cfg) {
     ["distro", "str", "runner"],
     ["dry-run", "bool", false],
   ]);
-  if (!/^\d+$/.test(f.duration) || Number(f.duration) > 360) throw new Error(`bad --duration "${f.duration}" (want 0-360)`);
-  if (!["terminal", "ide", "vscode", "desktop", "cli"].includes(f.stack)) throw new Error(`bad --stack "${f.stack}"`);
-  const stack = f.stack === "cli" ? "terminal" : f.stack;
-  let password = f.password;
+  const duration = str(f.duration) as string;
+  if (!/^\d+$/.test(duration) || Number(duration) > 360) throw new Error(`bad --duration "${duration}" (want 0-360)`);
+  const stackIn = str(f.stack) as string;
+  if (!["terminal", "ide", "vscode", "desktop", "cli"].includes(stackIn)) throw new Error(`bad --stack "${stackIn}"`);
+  const stack = stackIn === "cli" ? "terminal" : stackIn;
+  let password = str(f.password);
   if (!password) {
     password = crypto.randomBytes(12).toString("base64").replace(/[^A-Za-z0-9]/g, "").slice(0, 16);
     process.stdout.write(`generated password: ${password}\n`);
@@ -29,7 +32,7 @@ async function run(argv, cfg) {
   const dir = path.join(os.tmpdir(), "giecko-local");
   fs.mkdirSync(dir, { recursive: true });
   const templates = loadAll(null);
-  const files = {};
+  const files: Record<string, string> = {};
   for (const t of templates) files[t.repoPath] = t.body;
   const shBody = files["scripts/giecko.sh"];
   const boxBody = files["scripts/giecko"];
@@ -40,15 +43,13 @@ async function run(argv, cfg) {
   fs.writeFileSync(boxPath, boxBody);
   fs.chmodSync(shPath, 0o755);
   fs.chmodSync(boxPath, 0o755);
-  const args = [shPath, password, String(f.duration), String(f.packages || ""), stack, String(f.autosave), f.username, f.mask ? "true" : "false", f.distro];
-  if (f["dry-run"]) {
-    process.stdout.write("dry run. Would run:\n  bash " + args.join(" ").replace(password, "****") + "\nfrom " + dir + "\n");
+  const args = [shPath, password, duration, String(str(f.packages) || ""), stack, String(str(f.autosave) || "0"), str(f.username) || "giecko", bool(f.mask) ? "true" : "false", str(f.distro) || "runner"];
+  if (bool(f["dry-run"])) {
+    process.stdout.write("dry run. Would run:\n  bash " + args.join(" ").replace(password as string, "****") + "\nfrom " + dir + "\n");
     return;
   }
-  process.stdout.write(`starting local session (stack=${stack}, ${f.duration} min) from ${dir}\n`);
+  process.stdout.write(`starting local session (stack=${stack}, ${duration} min) from ${dir}\n`);
   const r = spawnSync("bash", args, { stdio: "inherit" });
   if (r.error) throw new Error("could not run bash (local mode needs bash): " + r.error.message);
   process.exitCode = r.status || 0;
 }
-
-module.exports = { run };

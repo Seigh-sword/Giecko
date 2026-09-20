@@ -1,10 +1,11 @@
-const fs = require("fs");
-const path = require("path");
-const { interactive, askText } = require("./ui");
+import * as fs from "fs";
+import * as path from "path";
+import { interactive, askText } from "./ui";
+import type { Config, Store } from "./store";
 
 const VERSION = "v1";
 
-function termsText() {
+function termsText(): string {
   try {
     return fs.readFileSync(path.join(__dirname, "..", "terms.txt"), "utf8");
   } catch {
@@ -12,11 +13,11 @@ function termsText() {
   }
 }
 
-function accepted(cfg) {
+function accepted(cfg: Config): boolean {
   return cfg.termsAccepted === VERSION;
 }
 
-async function ensureAccepted(cfg, store, autoAccept) {
+export async function ensureAccepted(cfg: Config, store: Store, autoAccept?: boolean): Promise<void> {
   if (accepted(cfg)) return;
   if (autoAccept) {
     cfg.termsAccepted = VERSION;
@@ -32,5 +33,3 @@ async function ensureAccepted(cfg, store, autoAccept) {
   cfg.termsAccepted = VERSION;
   store.save(cfg);
 }
-
-module.exports = { ensureAccepted };

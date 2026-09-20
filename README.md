@@ -38,6 +38,7 @@ giecko auth        # save a GitHub token as a named account (little TUI)
 giecko init        # wizard: repo, account, user, auth, OS, distro, mode, mask
 giecko launch      # review the plan, install, dispatch, print URL + QR, open it
 giecko ls          # recent sessions + save branches
+giecko logs <run-id> # tail a run's log from your laptop
 giecko cancel      # stop a running session
 giecko local       # run it on your own machine, no GitHub
 giecko update      # update CLI + session files (auto-check is on by default)
@@ -45,8 +46,10 @@ giecko plugin -i gcko.pkg-<name>   # install a session plugin
 ```
 
 `init`/`launch` ask everything interactively, and every question has a flag
-too (`giecko help`). One config per directory (`.giecko.json`), tokens in
-`~/.config/giecko/config.json` (0600). First run asks you to accept the
+too (`giecko help`). One config per directory (`.giecko.json`; `giecko init
+--config PATH` puts it anywhere you like), tokens in
+`~/.config/giecko/config.json` (0600). Every launch records the session
+under `~/.config/giecko/sessions/<run-id>/` (`giecko ls` lists them). First run asks you to accept the
 [terms](TERMS.md) (type `yes`).
 
 Prefer bash? `scripts/giecko` does `up`/`ls`/`watch` the same way —
@@ -99,6 +102,13 @@ a machine, not a tab.
 - The terminal link still works alongside it, and `giecko save`
   snapshots the same workspace
 
+
+## 🔁 Tab crashed? Just reopen it
+
+Sessions live on the runner, not in your tab: the shell runs in `tmux`
+behind the tunnel. Close the tab, crash the browser, walk away — reopen
+the URL (or `giecko ls` / `giecko watch`) and you are back in the same
+shell, the same files, the same running processes.
 
 ## ⌨️ "Typing feels slow" — read this
 
@@ -175,15 +185,20 @@ masked), plus a status comment on the commit. Control via commit message:
 - [ ] macOS runner stable (needs testing)
 - [ ] code-server inside the distro container (one shell everywhere)
 - [x] Desktop mode: the whole GUI OS in the browser (XFCE + noVNC)
-- [ ] CLI rewritten in TypeScript
+- [x] CLI rewritten in TypeScript (cli/src, compiled with tsc)
 - [x] `giecko cancel` — kill a session from your laptop
 - [x] `giecko local` — the whole stack on your machine, no GitHub
 - [x] `giecko launch --restore <run-id>` — continue a previous session's files
 - [x] Desktop on every runner OS (macOS and Windows over VNC)
 - [x] Auto-update + `giecko update` / `-upd`
 - [x] Plugins (`gcko.pkg-*`) and `giecko changelog`
+- [x] `giecko logs` — tail a run's log from your laptop
+- [x] sha256 checksums for every downloaded binary (boot log + report)
+- [x] Session records: `~/.config/giecko/sessions/<run-id>/`
+- [x] Browser reconnect after a tab crash (tmux keeps the session)
+- [x] Desktop favicon: lizard + repo avatar (noVNC)
+- [x] ISC license
 - [ ] Full plan: [ROADMAP.md](ROADMAP.md)
-- [ ] Pick runner region (needs self-hosted runners — the true lag fix)
 
 ## 🧩 How it works
 
@@ -192,7 +207,7 @@ masked), plus a status comment on the commit. Control via commit message:
 | [`.github/workflows/giecko.yml`](.github/workflows/giecko.yml) | Manual dispatch + push self-test matrix, keeps runner alive up to 6h |
 | [`scripts/giecko.sh`](scripts/giecko.sh) | Installs everything in parallel, starts services, opens tunnels, heartbeats, publishes reports |
 | [`scripts/giecko`](scripts/giecko) | On-box CLI (`info`, `urls`, `save`) + laptop CLI (`up`, `ls`, `watch`) |
-| [`cli/`](cli/) | The npm package: `auth`, `init`, `launch`, `ls`, `watch` with TUIs |
+| [`cli/`](cli/) | The npm package (TypeScript: `src/` compiled to `dist/`): `auth`, `init`, `launch`, `ls`, `watch`, `logs` with TUIs |
 | [`TERMS.md`](TERMS.md) | Fair-use terms (accepted on first `init`/`launch`) |
 | [`ttyd`](https://github.com/tsl0922/ttyd) | Real shell in `tmux` (host or `docker exec`) as a WebGL terminal |
 | [`code-server`](https://github.com/coder/code-server) | Real VS Code |

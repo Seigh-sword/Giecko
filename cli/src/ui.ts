@@ -1,59 +1,57 @@
-let cached = null;
+let cached: any = null;
 
-async function clack() {
+async function clack(): Promise<any> {
   if (!cached) {
-    const m = await import("@clack/prompts");
+    const m: any = await import("@clack/prompts");
     cached = m && m.select ? m : m.default;
   }
   return cached;
 }
 
-function interactive() {
+export function interactive(): boolean {
   return Boolean(process.stdin.isTTY && process.stdout.isTTY);
 }
 
-function needTTY(flagHint) {
+export function needTTY(flagHint: string): void {
   if (!interactive()) throw new Error(`not a terminal; pass ${flagHint} (see: giecko help)`);
 }
 
-async function pick(message, options) {
+export async function pick(message: string, options: Array<{ value: string; label: string }>): Promise<string> {
   const c = await clack();
   const v = await c.select({ message, options });
   if (c.isCancel(v)) throw new Error("cancelled");
-  return v;
+  return v as string;
 }
 
-async function askText(message, initialValue, validate) {
+export async function askText(message: string, initialValue?: string, validate?: (v: string) => string | undefined): Promise<string> {
   const c = await clack();
   const v = await c.text({ message, initialValue, validate });
   if (c.isCancel(v)) throw new Error("cancelled");
-  return v;
+  return v as string;
 }
 
-async function askSecret(message) {
+export async function askSecret(message: string): Promise<string> {
   const c = await clack();
   const v = await c.password({ message });
   if (c.isCancel(v)) throw new Error("cancelled");
-  return v;
+  return v as string;
 }
 
-async function askConfirm(message, initialValue) {
+export async function askConfirm(message: string, initialValue?: boolean): Promise<boolean> {
   const c = await clack();
   const v = await c.confirm({ message, initialValue: Boolean(initialValue) });
   if (c.isCancel(v)) throw new Error("cancelled");
-  return v;
+  return Boolean(v);
 }
 
-async function intro(title) {
+export async function intro(title: string): Promise<void> {
   (await clack()).intro(title);
 }
 
-async function outro(msg) {
+export async function outro(msg: string): Promise<void> {
   (await clack()).outro(msg);
 }
 
-async function note(msg, title) {
+export async function note(msg: string, title?: string): Promise<void> {
   (await clack()).note(msg, title || "");
 }
-
-module.exports = { interactive, needTTY, pick, askText, askSecret, askConfirm, intro, outro, note };

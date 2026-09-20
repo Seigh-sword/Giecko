@@ -27,8 +27,9 @@ session URL with a QR code and opens it in a browser. Each session gets
 its own `giecko-work/run-<id>` branch with the project files; the runner
 itself lives elsewhere, so anything in the editor is safe to delete.
 
-`giecko ls` lists recent sessions and save branches. `giecko watch <run-id>`
-waits for one run to go live. `giecko cancel [run-id]` stops a running
+`giecko ls` lists recent sessions and save branches (plus local session
+records). `giecko watch <run-id>` waits for one run to go live.
+`giecko logs <run-id> [--tail N]` tails the runner log from your laptop. `giecko cancel [run-id]` stops a running
 session. `giecko local` runs the stack on your own machine, no GitHub. `giecko update` / `giecko -upd`
 updates the CLI and session files, `giecko plugin -i gcko.pkg-<name>` installs
 session plugins, `giecko changelog` prints the changelog.
@@ -38,12 +39,17 @@ Pass --yes to launch without the review menu, --restore <run-id> to
 continue a previous session's files. Session files update themselves on
 launch; pass --nr to keep the existing ones.
 Config and tokens live in `~/.config/giecko/config.json` (mode 0600).
+Every launch writes a session record (plan, URLs, timestamps + a copy of
+the config) to `~/.config/giecko/sessions/<run-id>/`. `giecko init
+--config PATH` writes the session config anywhere you like.
 
 Development:
 
 ```
 cd cli
 npm install
+npm run build       # tsc: compile src/ to dist/
+npm run check       # node --check over bin/ + dist/
 npm run sync        # refresh bundled templates from the repo root
 node bin/giecko.js help
 ```
