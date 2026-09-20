@@ -498,10 +498,10 @@ else:
     raise SystemExit("auth failed for type %d: %s" % (need, results.get(need, "not tested")))
 PYEOF
   ); then
-    VNC_AUTH="ok"
+    VNC_AUTH="ok: $(printf '%s' "$out" | tr '\n' ' ')"
     echo "  vnc auth self-check: $out"
   else
-    VNC_AUTH="failed"
+    VNC_AUTH="failed: $(printf '%s' "$out" | tr '\n' ' ')"
     echo "  vnc auth self-check: FAILED"
     echo "$out"
   fi
