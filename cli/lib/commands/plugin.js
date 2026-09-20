@@ -11,7 +11,7 @@ function writeConfig(p, conf) {
 }
 
 function validPluginId(id) {
-  return /^gcko\\.pkg(-[a-z0-9][a-z0-9._-]*)?$/i.test(String(id || ""));
+  return /^gcko\.pkg(-[a-z0-9][a-z0-9._-]*)?$/i.test(String(id || ""));
 }
 
 async function run(argv, cfg) {
