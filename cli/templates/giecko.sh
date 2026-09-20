@@ -849,6 +849,9 @@ if [ "$STACK" = "desktop" ]; then
     else
       choco install tightvnc -y >/dev/null 2>&1 || fail "tightvnc install failed"
     fi
+    MSYS_NO_PATHCONV=1 reg add "HKLM\SOFTWARE\TightVNC\Server" //v AllowLoopback //t REG_DWORD //d 1 //f >/dev/null 2>&1 || true
+    (sc.exe stop tvnserver >/dev/null 2>&1 || true)
+    (sc.exe start tvnserver >/dev/null 2>&1 || true)
     (cmd //c start explorer.exe >/dev/null 2>&1 || true) &
     vup=0
     for _ in {1..45}; do netstat -an | grep -q ":$VNC_PORT .*LISTENING" && { vup=1; break; }; sleep 2; done
