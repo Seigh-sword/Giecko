@@ -15,7 +15,7 @@ giecko launch
 
 `giecko init` creates a `.giecko.json` session config: repository (existing
 or newly created, any org, public or private), username, password on/off,
-runner OS, Linux distro, mode (cli = terminal link, ide = VS Code link),
+runner OS, Linux distro, mode (cli = terminal link, ide = VS Code link, desktop = GUI OS),
 URL naming (random or your own domain via a Cloudflare tunnel token),
 hostname masking, session length, extra packages, and autosave interval.
 Accepts the Giecko terms on first run.
@@ -28,10 +28,12 @@ its own `giecko-work/run-<id>` branch with the project files; the runner
 itself lives elsewhere, so anything in the editor is safe to delete.
 
 `giecko ls` lists recent sessions and save branches. `giecko watch <run-id>`
-waits for one run to go live.
+waits for one run to go live. `giecko cancel [run-id]` stops a running
+session. `giecko local` runs the stack on your own machine, no GitHub.
 
 Every interactive prompt has a flag equivalent; see `giecko help`.
-Pass --yes to launch without the review menu.
+Pass --yes to launch without the review menu, --restore <run-id> to
+continue a previous session's files.
 Config and tokens live in `~/.config/giecko/config.json` (mode 0600).
 
 Development:

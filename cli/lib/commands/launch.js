@@ -167,6 +167,7 @@ async function run(argv, cfg, store) {
     ["random-url", "bool", false],
     ["yes", "bool", false],
     ["verbose", "bool", false],
+    ["restore", "str", null],
   ]);
   if (!haveGh()) throw new Error("need the GitHub CLI: https://cli.github.com");
   const say = (m) => {
@@ -192,12 +193,14 @@ async function run(argv, cfg, store) {
   const autosave = String(pick(f.autosave, conf.autosave, "15"));
   if (!/^\d+$/.test(duration) || Number(duration) < 1 || Number(duration) > 360) throw new Error(`bad duration "${duration}" (want 1-360)`);
   if (!/^\d+$/.test(autosave)) throw new Error(`bad autosave "${autosave}" (want 0 or more)`);
+  if (f.restore && !/^\d+$/.test(f.restore)) throw new Error("bad --restore (want a run id number)");
   if (os !== "ubuntu-latest" && os !== "macos-latest" && os !== "windows-latest") throw new Error(`bad os "${os}"`);
   if (!["runner", "ubuntu", "debian", "fedora", "arch", "alpine"].includes(distro)) throw new Error(`bad distro "${distro}"`);
   if ((os === "macos-latest" || os === "windows-latest") && distro !== "runner") throw new Error("docker distros need Linux (macOS and Windows force distro=runner)");
   if (!["cli", "ide"].includes(mode) && !f.stack) throw new Error(`bad mode "${mode}"`);
-  const stack = f.stack || (mode === "cli" ? "terminal" : "vscode");
-  if (!["terminal", "ide", "vscode"].includes(stack)) throw new Error(`bad stack "${stack}"`);
+  const stack = f.stack || (mode === "cli" ? "terminal" : mode === "desktop" ? "desktop" : "vscode");
+  if (!["terminal", "ide", "vscode", "desktop"].includes(stack)) throw new Error(`bad stack "${stack}"`);
+  if (stack === "desktop" && os !== "ubuntu-latest") throw new Error("desktop mode needs --os ubuntu-latest");
 
   let tunnel = f["random-url"] ? "random" : null;
   if (tunnel === null && f["cf-token"] !== null && f["cf-token"] !== undefined && f["cf-token"] !== "") tunnel = "named";
@@ -217,7 +220,7 @@ async function run(argv, cfg, store) {
     password = "";
   }
 
-  const plan = () => ({ repo, account: accountName || "(ambient gh auth)", username, authOn, os, distro, mode, stack, mask, duration, packages, autosave, tunnel, cfToken: cfToken ? "(set)" : "" });
+  const plan = () => ({ repo, account: accountName || "(ambient gh auth)", username, authOn, os, distro, mode, stack, mask, duration, packages, autosave, tunnel, cfToken: cfToken ? "(set)" : "", restore: f.restore || "" });
   const showPlan = () => {
     const p = plan();
     process.stdout.write("\nsession plan:\n");
@@ -229,7 +232,8 @@ async function run(argv, cfg, store) {
     process.stdout.write(`  auth      ${p.authOn ? "password" : "off (open session)"}\n`);
     process.stdout.write(`  duration  ${p.duration} min\n`);
     process.stdout.write(`  autosave  ${p.autosave} min\n`);
-    process.stdout.write(`  packages  ${p.packages || "(none)"}\n\n`);
+    process.stdout.write(`  packages  ${p.packages || "(none)"}\n`);
+    process.stdout.write(`  restore   ${p.restore ? "files from run " + p.restore : "(fresh)"}\n\n`);
   };
   showPlan();
   if (f["dry-run"]) {
@@ -277,7 +281,7 @@ async function run(argv, cfg, store) {
   process.stdout.write(`dispatching ${stack} session on ${repo}...\n`);
   dispatch(token, repo, branch, {
     stack, os, distro, user: username, password: authOn ? password : NO_PASSWORD, mask: Boolean(mask),
-    duration_minutes: duration, packages, autosave_minutes: autosave, cf_token: cfToken,
+    duration_minutes: duration, packages, autosave_minutes: autosave, cf_token: cfToken, restore: f.restore || "",
   });
 
   let runId = "";
@@ -295,8 +299,8 @@ async function run(argv, cfg, store) {
   if (!rep.found) throw new Error(`run ${runId} is still not live after 6 minutes. Check the Actions tab.`);
   const r = parseReport(rep.text);
   const wantCode = stack !== "terminal";
-  const named = /named-tunnel/i.test(r.term || "") || /named-tunnel/i.test(r.code || "");
-  const url = named ? "" : wantCode ? realUrl(r.code) : realUrl(r.term);
+  const named = /named-tunnel/i.test(r.term || "") || /named-tunnel/i.test(r.code || "") || /named-tunnel/i.test(r.desk || "");
+  const url = named ? "" : stack === "desktop" ? (realUrl(r.desk) || realUrl(r.term)) : wantCode ? realUrl(r.code) : realUrl(r.term);
   const runPage = `https://github.com/${repo}/actions/runs/${runId}`;
 
   process.stdout.write("\nGIECKO IS LIVE\n");

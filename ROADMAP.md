@@ -1,7 +1,7 @@
 # Giecko Roadmap
 
 Where Giecko is headed. The big one is 0.5.0, the daily-driver release.
-Current release: 0.3.0.
+Current release: 0.4.0.
 
 ## Done
 
@@ -11,14 +11,14 @@ Current release: 0.3.0.
 - 0.3.0 - session plan with interactive review at launch (mask, URL naming,
   duration visible); named Cloudflare tunnels for your own domain
   (`--cf-token` / `cf_token` input); this roadmap
+- 0.4.0 - desktop mode (XFCE + noVNC: the whole GUI OS in the browser);
+  `giecko cancel`; `giecko local`; `launch --restore <run-id>`
 
 ## 0.4.0 - foundations (next)
 
 - TypeScript CLI: the whole cli/ package rewritten in TypeScript and
   compiled to plain JavaScript for npm. Same commands, same config,
   static types to kill whole classes of bugs.
-- Desktop mode: a full GUI OS in the browser (noVNC + a lightweight
-  Linux desktop) as a third mode next to cli and ide.
 - Session resume: reconnect a browser to a still-running session after
   a tab crash without losing the shell.
 - `giecko logs`: tail the runner log from your laptop.

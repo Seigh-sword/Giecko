@@ -6,7 +6,8 @@
 
 Dispatch a workflow → it boots a runner, opens Cloudflare tunnels
 (`https://something.trycloudflare.com`) → you visit the URL → you have
-a real Linux **terminal** and/or **VS Code**. That's it. That's the crazy idea.
+a real Linux **terminal**, **VS Code**, or a **full desktop**. That's it.
+That's the crazy idea.
 And it works.
 
 ```
@@ -20,7 +21,7 @@ And it works.
 
 1. Go to the **Actions** tab → **🦎 Giecko Terminal** → **Run workflow**
 2. Pick your session:
-   - **stack**: `ide` (terminal + VS Code), `terminal` (shell only), `vscode` (VS Code only)
+   - **stack**: `ide` (terminal + VS Code), `terminal` (shell only), `vscode` (VS Code only), `desktop` (full GUI OS in the browser, Linux)
    - **os**: `ubuntu-latest` (recommended), `macos-latest`, or `windows-latest`
    - **distro**: runner OS directly, or a docker shell: `ubuntu`, `debian`, `fedora`, `arch`, `alpine`
    - **user**, **password** (blank = open session, your funeral), **mask** (streamer mode)
@@ -37,6 +38,8 @@ giecko auth        # save a GitHub token as a named account (little TUI)
 giecko init        # wizard: repo, account, user, auth, OS, distro, mode, mask
 giecko launch      # review the plan, install, dispatch, print URL + QR, open it
 giecko ls          # recent sessions + save branches
+giecko cancel      # stop a running session
+giecko local       # run it on your own machine, no GitHub
 ```
 
 `init`/`launch` ask everything interactively, and every question has a flag
@@ -76,6 +79,21 @@ domain? Bring a Cloudflare named tunnel:
 
 One named tunnel serves the whole session; the hostnames are whatever
 you routed in the dashboard. Random URLs stay the default.
+
+## Desktop mode: the whole OS in your browser
+
+Pick `desktop` as the stack (web input, `--stack desktop`, or `--mode
+desktop` in `giecko init`) and the runner boots a real graphical desktop:
+Xvfb for the display, XFCE as the desktop, x11vnc + noVNC to put it in
+your browser. You get apps, a terminal, a file manager — a machine, not
+a tab.
+
+- Linux only (`ubuntu-latest`); adds roughly a minute to boot
+- The desktop asks for your session password — type only its **first 8
+  characters** (a VNC protocol limit)
+- The screen is 1600x900 and scales to your window
+- The terminal link still works alongside it, and `giecko save`
+  snapshots the same workspace
 
 
 ## ⌨️ "Typing feels slow" — read this
@@ -121,7 +139,7 @@ masked), plus a status comment on the commit. Control via commit message:
 | `[skip giecko]` | skip the test |
 | `[quick]` | zero-wait check (~40s) instead of 10 min |
 | `[noauth]` | blank password (tests open mode) |
-| `[stack=terminal]` / `[stack=vscode]` | test a single stack |
+| `[stack=terminal]` / `[stack=vscode]` / `[stack=desktop]` | test a single stack |
 | `[distro=ubuntu]` (or debian/fedora/arch/alpine) | test that container |
 | `[mask]` | test masked output |
 | `[os=macos]` | test the macOS runner |
@@ -152,8 +170,11 @@ masked), plus a status comment on the commit. Control via commit message:
 - [x] Named tunnel + your own domain (`--cf-token` / `cf_token` input)
 - [ ] macOS runner stable (needs testing)
 - [ ] code-server inside the distro container (one shell everywhere)
-- [ ] Desktop mode: the whole GUI OS in the browser
+- [x] Desktop mode: the whole GUI OS in the browser (XFCE + noVNC)
 - [ ] CLI rewritten in TypeScript
+- [x] `giecko cancel` — kill a session from your laptop
+- [x] `giecko local` — the whole stack on your machine, no GitHub
+- [x] `giecko launch --restore <run-id>` — continue a previous session's files
 - [ ] Full plan: [ROADMAP.md](ROADMAP.md)
 - [ ] Pick runner region (needs self-hosted runners — the true lag fix)
 
@@ -170,6 +191,7 @@ masked), plus a status comment on the commit. Control via commit message:
 | [`code-server`](https://github.com/coder/code-server) | Real VS Code |
 | [`cloudflared`](https://github.com/cloudflare/cloudflared) | Quick Tunnels: each port → `https://*.trycloudflare.com`, no account |
 | [`trzsz`](https://trzsz.github.io/) + `lrzsz` | File transfer straight through the terminal |
+| [`noVNC`](https://github.com/novnc/noVNC) + `x11vnc` | Desktop mode: XFCE on Xvfb, in your browser |
 
 ---
 

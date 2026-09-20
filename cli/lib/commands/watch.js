@@ -21,12 +21,15 @@ async function run(argv, cfg) {
   const r = parseReport(rep.text);
   const term = realUrl(r.term);
   const code = realUrl(r.code);
+  const desk = realUrl(r.desk);
   process.stdout.write("\nGIECKO IS LIVE\n");
   process.stdout.write(`  terminal: ${term || r.term || "(not in this session)"}\n`);
   process.stdout.write(`  vscode  : ${code || r.code || "(not in this session)"}\n`);
+  process.stdout.write(`  desktop : ${desk || r.desk || "(not in this session)"}\n`);
   process.stdout.write(`  region  : ${r.region}   boot: ${r.boot}s\n`);
   if (term) showQr(term);
   if (code) showQr(code);
+  if (desk) showQr(desk);
 }
 
 module.exports = { run };
