@@ -1,7 +1,7 @@
 # Giecko Roadmap
 
 Where Giecko is headed. The big one is 0.5.0, the daily-driver release.
-Current release: 0.4.0.
+Current release: 0.4.5.
 
 ## Done
 
@@ -13,6 +13,10 @@ Current release: 0.4.0.
   (`--cf-token` / `cf_token` input); this roadmap
 - 0.4.0 - desktop mode (XFCE + noVNC: the whole GUI OS in the browser);
   `giecko cancel`; `giecko local`; `launch --restore <run-id>`
+- 0.4.5 - desktop mode on every runner OS (macOS and Windows get the
+  real desktop over VNC); session files update themselves (--nr opts
+  out); auto update + `giecko update` / `-upd`; plugins (`gcko.pkg-*`);
+  `giecko changelog`; npm package ships the scripts folder
 
 ## 0.4.0 - foundations (next)
 

@@ -1,5 +1,6 @@
 const fs = require("fs");
 const crypto = require("crypto");
+const { spawnSync } = require("child_process");
 const { parse } = require("../flags");
 const { tokenFor } = require("../store");
 const { haveGh, ghApiJson, openBrowser } = require("../run");
@@ -88,7 +89,7 @@ function installFiles(token, repo, branch, templates, reinstall, verbose) {
     } else if (sha !== gitHash(want) && reinstall) {
       pending.push({ repoPath: t.repoPath, source: t.source, want, existed: true });
     } else if (sha !== gitHash(want)) {
-      process.stdout.write(`kept ${t.repoPath} (differs; use --reinstall to overwrite)\n`);
+      process.stdout.write(`kept ${t.repoPath} (differs; updating is off for this launch)\n`);
     } else {
       process.stdout.write(`kept ${t.repoPath} (current)\n`);
     }
@@ -168,6 +169,9 @@ async function run(argv, cfg, store) {
     ["yes", "bool", false],
     ["verbose", "bool", false],
     ["restore", "str", null],
+    ["plugins", "str", null],
+    ["nr", "bool", false],
+    ["no-reinstall", "bool", false],
   ]);
   if (!haveGh()) throw new Error("need the GitHub CLI: https://cli.github.com");
   const say = (m) => {
@@ -175,6 +179,18 @@ async function run(argv, cfg, store) {
   };
 
   const conf = readConfig(f.config);
+  if (conf.autoUpdateCheck !== false && !process.env.GIECKO_NO_UPDATE) {
+    try {
+      const rcp = require("../package.json");
+      const r = spawnSync("npm", ["view", "giecko", "version"], { encoding: "utf8", timeout: 15000 });
+      const latest = r.status === 0 ? String(r.stdout || "").trim().split("\n").pop().trim() : "";
+      const a = latest.split(".").map(Number);
+      const b = rcp.version.split(".").map(Number);
+      let up = false;
+      for (let i = 0; i < 3; i++) { if ((a[i] || 0) !== (b[i] || 0)) { up = (a[i] || 0) > (b[i] || 0); break; } }
+      if (up) process.stdout.write("update available: " + rcp.version + " -> " + latest + ". Run: giecko update\n");
+    } catch {}
+  }
   const pick = (flagVal, confVal, def) => (flagVal === null || flagVal === undefined ? (confVal === undefined ? def : confVal) : flagVal);
 
   const repo = pick(f.repo, conf.repo, "");
@@ -191,6 +207,7 @@ async function run(argv, cfg, store) {
   let duration = String(pick(f.duration, conf.duration, "180"));
   const packages = String(pick(f.packages, conf.packages, ""));
   const autosave = String(pick(f.autosave, conf.autosave, "15"));
+  const plugins = String(f.plugins !== null && f.plugins !== undefined ? f.plugins : (conf.plugins || []).join(" ")).trim();
   if (!/^\d+$/.test(duration) || Number(duration) < 1 || Number(duration) > 360) throw new Error(`bad duration "${duration}" (want 1-360)`);
   if (!/^\d+$/.test(autosave)) throw new Error(`bad autosave "${autosave}" (want 0 or more)`);
   if (f.restore && !/^\d+$/.test(f.restore)) throw new Error("bad --restore (want a run id number)");
@@ -200,7 +217,6 @@ async function run(argv, cfg, store) {
   if (!["cli", "ide", "desktop"].includes(mode) && !f.stack) throw new Error(`bad mode "${mode}"`);
   const stack = f.stack || (mode === "cli" ? "terminal" : mode === "desktop" ? "desktop" : "vscode");
   if (!["terminal", "ide", "vscode", "desktop"].includes(stack)) throw new Error(`bad stack "${stack}"`);
-  if (stack === "desktop" && os !== "ubuntu-latest") throw new Error("desktop mode needs --os ubuntu-latest");
 
   let tunnel = f["random-url"] ? "random" : null;
   if (tunnel === null && f["cf-token"] !== null && f["cf-token"] !== undefined && f["cf-token"] !== "") tunnel = "named";
@@ -220,7 +236,7 @@ async function run(argv, cfg, store) {
     password = "";
   }
 
-  const plan = () => ({ repo, account: accountName || "(ambient gh auth)", username, authOn, os, distro, mode, stack, mask, duration, packages, autosave, tunnel, cfToken: cfToken ? "(set)" : "", restore: f.restore || "" });
+  const plan = () => ({ repo, account: accountName || "(ambient gh auth)", username, authOn, os, distro, mode, stack, mask, duration, packages, autosave, tunnel, cfToken: cfToken ? "(set)" : "", restore: f.restore || "", plugins });
   const showPlan = () => {
     const p = plan();
     process.stdout.write("\nsession plan:\n");
@@ -233,6 +249,7 @@ async function run(argv, cfg, store) {
     process.stdout.write(`  duration  ${p.duration} min\n`);
     process.stdout.write(`  autosave  ${p.autosave} min\n`);
     process.stdout.write(`  packages  ${p.packages || "(none)"}\n`);
+    process.stdout.write(`  plugins   ${p.plugins || "(none)"}\n`);
     process.stdout.write(`  restore   ${p.restore ? "files from run " + p.restore : "(fresh)"}\n\n`);
   };
   showPlan();
@@ -273,7 +290,8 @@ async function run(argv, cfg, store) {
   if (!f["skip-install"]) {
     const templates = loadAll(token);
     say(`templates source: ${templates[0].source}`);
-    installFiles(token, repo, branch, templates, f.reinstall, f.verbose);
+    const reinstall = f.reinstall ? true : f.nr || f["no-reinstall"] ? false : true;
+  installFiles(token, repo, branch, templates, reinstall, f.verbose);
   }
 
   const before = latestRunId(token, repo);
@@ -281,7 +299,7 @@ async function run(argv, cfg, store) {
   process.stdout.write(`dispatching ${stack} session on ${repo}...\n`);
   dispatch(token, repo, branch, {
     stack, os, distro, user: username, password: authOn ? password : NO_PASSWORD, mask: Boolean(mask),
-    duration_minutes: duration, packages, autosave_minutes: autosave, cf_token: cfToken, restore: f.restore || "",
+    duration_minutes: duration, packages, autosave_minutes: autosave, cf_token: cfToken, restore: f.restore || "", plugins,
   });
 
   let runId = "";

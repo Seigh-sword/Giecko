@@ -46,10 +46,6 @@ if [ "$DISTRO" != "runner" ]; then
   fi
 fi
 if [ "$STACK" = "desktop" ]; then
-  if [ "$OSNAME" != "Linux" ]; then
-    echo " desktop mode needs the Linux runner (pick os=ubuntu-latest)"
-    exit 1
-  fi
   if [ "$DISTRO" != "runner" ]; then
     echo " desktop runs on the runner host; distro forced to runner"
     DISTRO="runner"
@@ -329,7 +325,7 @@ if [ "$NEED_TTYD" = 1 ]; then wait $P2 || fail "ttyd install failed"; fi
 CODE_DL_OK=1
 if [ "$NEED_CODE" = 1 ]; then wait $P3 || CODE_DL_OK=0; fi
 wait $P4 || true
-if [ "$STACK" = "desktop" ]; then command -v Xvfb >/dev/null 2>&1 || fail "desktop packages did not install"; fi
+if [ "$STACK" = "desktop" ] && [ "$OSNAME" = "Linux" ]; then command -v Xvfb >/dev/null 2>&1 || fail "desktop packages did not install"; fi
 cloudflared --version
 [ "$NEED_TTYD" = 1 ] && ttyd --version
 
@@ -353,6 +349,15 @@ if [ -f "$SCRIPT_DIR/giecko" ]; then
   priv cp "$SCRIPT_DIR/giecko" "$BIN_DIR/giecko" && priv chmod +x "$BIN_DIR/giecko" && echo " giecko CLI installed"
 else
   echo "  scripts/giecko not found next to installer, 'giecko save' disabled"
+fi
+
+if [ -n "${GIECKO_PLUGINS:-}" ]; then
+  echo " installing plugins..."
+  if command -v npm >/dev/null 2>&1; then
+    npm install -g --silent $GIECKO_PLUGINS 2>/dev/null || echo "  some plugins failed to install"
+  else
+    echo "  no npm on this runner, plugins skipped"
+  fi
 fi
 if [ "$NEED_TTYD" = 1 ]; then command -v tmux >/dev/null 2>&1 || echo "  no tmux, shell won't persist across reconnects"; fi
 
@@ -532,24 +537,73 @@ if [ "$NEED_CODE" = 1 ]; then
 fi
 
 if [ "$STACK" = "desktop" ]; then
-  echo "  starting desktop (Xvfb + XFCE + x11vnc + noVNC)..."
-  rm -f "$RUNDIR"/xvfb.log "$RUNDIR"/xfce.log "$RUNDIR"/x11vnc.log "$RUNDIR"/novnc.log "$RUNDIR"/xvfb.pid "$RUNDIR"/xfce.pid "$RUNDIR"/x11vnc.pid "$RUNDIR"/novnc.pid
-  nohup Xvfb ":$DESK_DISPLAY" -screen 0 1600x900x24 > "$RUNDIR/xvfb.log" 2>&1 &
-  echo "$!" > "$RUNDIR/xvfb.pid"
-  sleep 2
-  kill -0 "$(cat "$RUNDIR/xvfb.pid" 2>/dev/null)" 2>/dev/null || { cat "$RUNDIR/xvfb.log" || true; fail "Xvfb failed to start"; }
-  DISPLAY=":$DESK_DISPLAY" nohup dbus-run-session -- startxfce4 > "$RUNDIR/xfce.log" 2>&1 &
-  echo "$!" > "$RUNDIR/xfce.pid"
-  sleep 3
-  VNC_OPTS=(-display ":$DESK_DISPLAY" -rfbport "$VNC_PORT" -forever -shared -noxdamage)
-  [ -n "$PASSWORD" ] && VNC_OPTS+=(-passwd "${PASSWORD:0:8}")
-  nohup x11vnc "${VNC_OPTS[@]}" > "$RUNDIR/x11vnc.log" 2>&1 &
-  echo "$!" > "$RUNDIR/x11vnc.pid"
-  sleep 1
-  kill -0 "$(cat "$RUNDIR/x11vnc.pid" 2>/dev/null)" 2>/dev/null || { cat "$RUNDIR/x11vnc.log" || true; fail "x11vnc failed to start"; }
-  NOVNC_WEB=/usr/share/novnc
-  [ -d "$NOVNC_WEB" ] || NOVNC_WEB=/usr/share/webapps/novnc
-  nohup websockify --web "$NOVNC_WEB" "$DESK_PORT" "localhost:$VNC_PORT" > "$RUNDIR/novnc.log" 2>&1 &
+  VNC_PW="${PASSWORD:0:8}"
+  rm -f "$RUNDIR"/xvfb.log "$RUNDIR"/xfce.log "$RUNDIR"/x11vnc.log "$RUNDIR"/novnc.log "$RUNDIR"/xvfb.pid "$RUNDIR"/xfce.pid "$RUNDIR"/x11vnc.pid "$RUNDIR"/novnc.pid "$RUNDIR"/novnc.tgz
+  if [ "$OSNAME" = "Linux" ]; then
+    echo "  starting desktop (Xvfb + XFCE + x11vnc + noVNC)..."
+    nohup Xvfb ":$DESK_DISPLAY" -screen 0 1600x900x24 > "$RUNDIR/xvfb.log" 2>&1 &
+    echo "$!" > "$RUNDIR/xvfb.pid"
+    sleep 2
+    kill -0 "$(cat "$RUNDIR/xvfb.pid" 2>/dev/null)" 2>/dev/null || { cat "$RUNDIR/xvfb.log" || true; fail "Xvfb failed to start"; }
+    DISPLAY=":$DESK_DISPLAY" nohup dbus-run-session -- startxfce4 > "$RUNDIR/xfce.log" 2>&1 &
+    echo "$!" > "$RUNDIR/xfce.pid"
+    sleep 3
+    VNC_OPTS=(-display ":$DESK_DISPLAY" -rfbport "$VNC_PORT" -forever -shared -noxdamage)
+    [ -n "$VNC_PW" ] && VNC_OPTS+=(-passwd "$VNC_PW")
+    nohup x11vnc "${VNC_OPTS[@]}" > "$RUNDIR/x11vnc.log" 2>&1 &
+    echo "$!" > "$RUNDIR/x11vnc.pid"
+    sleep 1
+    kill -0 "$(cat "$RUNDIR/x11vnc.pid" 2>/dev/null)" 2>/dev/null || { cat "$RUNDIR/x11vnc.log" || true; fail "x11vnc failed to start"; }
+    NOVNC_DIR=/usr/share/novnc
+    [ -d "$NOVNC_DIR" ] || NOVNC_DIR=/usr/share/webapps/novnc
+  elif [ "$OSNAME" = "Darwin" ]; then
+    echo "  macOS desktop: enabling the built-in VNC server..."
+    KS="/System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart"
+    if [ -n "$VNC_PW" ]; then
+      priv "$KS" -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw "$VNC_PW" -restart -agent -privs -all || fail "could not enable the macOS VNC server"
+    else
+      priv "$KS" -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes -restart -agent -privs -all || fail "could not enable the macOS VNC server"
+    fi
+    vup=0
+    for _ in {1..30}; do nc -z 127.0.0.1 "$VNC_PORT" 2>/dev/null && { vup=1; break; }; sleep 2; done
+    [ "$vup" = 1 ] || fail "macOS VNC server never came up on port $VNC_PORT"
+    PYBIN=python3
+    command -v python3 >/dev/null 2>&1 || PYBIN=python
+    "$PYBIN" -m pip install --user --quiet websockify >/dev/null 2>&1 || fail "websockify install failed"
+    export PATH="$("$PYBIN" -c 'import site,os;print(os.path.join(site.USER_BASE,"bin"))'):$PATH"
+    command -v websockify >/dev/null 2>&1 || fail "websockify not found after install"
+    NOVNC_DIR="$RUNDIR/novnc-1.4.0"
+    if [ ! -d "$NOVNC_DIR" ]; then
+      echo "  fetching noVNC (web client)..."
+      fetch -o "$RUNDIR/novnc.tgz" "https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz" || fail "noVNC download failed"
+      tar -xzf "$RUNDIR/novnc.tgz" -C "$RUNDIR" || fail "noVNC extract failed"
+    fi
+  elif [ "$IS_WINDOWS" = 1 ]; then
+    echo "  windows desktop: installing TightVNC..."
+    if [ -n "$VNC_PW" ]; then
+      choco install tightvnc -y --params "/PASSWORD:$VNC_PW" >/dev/null 2>&1 || fail "tightvnc install failed (password mode)"
+    else
+      choco install tightvnc -y >/dev/null 2>&1 || fail "tightvnc install failed"
+    fi
+    (cmd //c start explorer.exe >/dev/null 2>&1 || true) &
+    vup=0
+    for _ in {1..45}; do netstat -an | grep -q ":$VNC_PORT .*LISTENING" && { vup=1; break; }; sleep 2; done
+    [ "$vup" = 1 ] || fail "tightvnc never came up on port $VNC_PORT"
+    PYBIN=python3
+    command -v python3 >/dev/null 2>&1 || PYBIN=python
+    "$PYBIN" -m pip install --user --quiet websockify >/dev/null 2>&1 || fail "websockify install failed"
+    export PATH="$("$PYBIN" -c 'import site,os;print(os.path.join(site.USER_BASE,"Scripts") if os.name=="nt" else os.path.join(site.USER_BASE,"bin"))'):$PATH"
+    command -v websockify >/dev/null 2>&1 || fail "websockify not found after install"
+    NOVNC_DIR="$RUNDIR/novnc-1.4.0"
+    if [ ! -d "$NOVNC_DIR" ]; then
+      echo "  fetching noVNC (web client)..."
+      fetch -o "$RUNDIR/novnc.tgz" "https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz" || fail "noVNC download failed"
+      tar -xzf "$RUNDIR/novnc.tgz" -C "$RUNDIR" || fail "noVNC extract failed"
+    fi
+  else
+    fail "desktop mode is not supported on this OS"
+  fi
+  nohup websockify --web "$NOVNC_DIR" "$DESK_PORT" "localhost:$VNC_PORT" > "$RUNDIR/novnc.log" 2>&1 &
   echo "$!" > "$RUNDIR/novnc.pid"
   up=0
   for _ in {1..30}; do http_up "$DESK_PORT" && { up=1; break; }; sleep 1; done

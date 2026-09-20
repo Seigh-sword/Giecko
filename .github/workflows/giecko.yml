@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       stack:
-        description: 'Session: "ide" = terminal + VS Code, "terminal" = shell only, "vscode" = VS Code only, "desktop" = full GUI OS in the browser (linux)'
+        description: 'Session: "ide" = terminal + VS Code, "terminal" = shell only, "vscode" = VS Code only, "desktop" = full GUI OS in the browser'
         required: false
         default: 'ide'
         type: choice
@@ -54,6 +54,10 @@ on:
         description: 'Optional: run id whose saved files to copy into the new workspace at boot'
         required: false
         default: ''
+      plugins:
+        description: 'Optional: npm packages to install into the session (space-separated, each tagged gcko.pkg-<name>)'
+        required: false
+        default: ''
   push:
     branches: [arena/01a09a7b-giecko]
 
@@ -71,6 +75,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CF_TUNNEL_TOKEN: ${{ inputs.cf_token }}
       GIECKO_RESTORE: ${{ inputs.restore }}
+      GIECKO_PLUGINS: ${{ inputs.plugins }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7

@@ -11,6 +11,9 @@ Usage:
   giecko watch <run-id> [--repo owner/name]
   giecko cancel [run-id] [--repo owner/name]
   giecko local [options]
+  giecko update [--self | --on | --off]
+  giecko plugin -i <pkg> | -r <pkg> | -l
+  giecko changelog
 
 auth:
   save GitHub tokens as named accounts. Interactive when run as plain
@@ -55,7 +58,8 @@ launch:
     --duration MIN        session length, max 360 (default: 180)
     --packages "a b"      extra system packages
     --autosave MIN        workspace snapshot interval, 0 = off (default: 15)
-    --reinstall           overwrite Giecko files in the repo
+    --reinstall           overwrite Giecko files in the repo (they update themselves by default)
+    --nr                  no reinstall: keep the repo's existing Giecko files
     --open | --no-open    open the session URL in a browser (default: open)
     --dry-run             print the plan without touching anything
     --cf-token TOKEN      named Cloudflare tunnel (overrides the config)
@@ -74,6 +78,21 @@ local:
     --duration MIN        minutes to stay up (default: 120, max 360)
     --packages LIST       extra system packages
     --dry-run             print the command without running it
+
+update / -upd:
+  keep @BRAND@ current: checks npm for a newer CLI and refreshes the
+  session files in your repo from upstream.
+    --self      install the latest CLI from npm right now
+    --on/--off  enable or disable the update check on launch
+
+plugin:
+  install npm packages into your sessions.
+    -i <pkg>    install (the package must be tagged gcko.pkg-<name>)
+    -r <pkg>    remove
+    -l          list installed plugins
+
+changelog:
+  print the @BRAND@ changelog.
 
 Config and tokens live in ~/.config/giecko/config.json (mode 0600).
 Full terms: TERMS.md in the Giecko repository.`;
@@ -99,6 +118,9 @@ async function main() {
   if (cmd === "watch") return require("../lib/commands/watch").run(rest, cfg, store);
   if (cmd === "cancel") return require("../lib/commands/cancel").run(rest, cfg, store);
   if (cmd === "local") return require("../lib/commands/local").run(rest, cfg, store);
+  if (cmd === "update" || cmd === "-upd") return require("../lib/commands/update").run(rest, cfg, store);
+  if (cmd === "plugin" || cmd === "plugins") return require("../lib/commands/plugin").run(rest, cfg, store);
+  if (cmd === "changelog") return require("../lib/commands/changelog").run(rest, cfg, store);
   process.stderr.write(`Error: unknown command "${cmd}". Run "giecko help".\n`);
   process.exitCode = 1;
 }

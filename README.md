@@ -21,7 +21,7 @@ And it works.
 
 1. Go to the **Actions** tab → **🦎 Giecko Terminal** → **Run workflow**
 2. Pick your session:
-   - **stack**: `ide` (terminal + VS Code), `terminal` (shell only), `vscode` (VS Code only), `desktop` (full GUI OS in the browser, Linux)
+   - **stack**: `ide` (terminal + VS Code), `terminal` (shell only), `vscode` (VS Code only), `desktop` (full GUI OS in the browser)
    - **os**: `ubuntu-latest` (recommended), `macos-latest`, or `windows-latest`
    - **distro**: runner OS directly, or a docker shell: `ubuntu`, `debian`, `fedora`, `arch`, `alpine`
    - **user**, **password** (blank = open session, your funeral), **mask** (streamer mode)
@@ -40,6 +40,8 @@ giecko launch      # review the plan, install, dispatch, print URL + QR, open it
 giecko ls          # recent sessions + save branches
 giecko cancel      # stop a running session
 giecko local       # run it on your own machine, no GitHub
+giecko update      # update CLI + session files (auto-check is on by default)
+giecko plugin -i gcko.pkg-<name>   # install a session plugin
 ```
 
 `init`/`launch` ask everything interactively, and every question has a flag
@@ -83,12 +85,14 @@ you routed in the dashboard. Random URLs stay the default.
 ## Desktop mode: the whole OS in your browser
 
 Pick `desktop` as the stack (web input, `--stack desktop`, or `--mode
-desktop` in `giecko init`) and the runner boots a real graphical desktop:
-Xvfb for the display, XFCE as the desktop, x11vnc + noVNC to put it in
-your browser. You get apps, a terminal, a file manager — a machine, not
-a tab.
+desktop` in `giecko init`) and the runner boots a real graphical desktop and puts it in your browser
+with noVNC. On Linux that is XFCE on Xvfb; on macOS and Windows it is
+the runner's actual desktop. You get apps, a terminal, a file manager —
+a machine, not a tab.
 
-- Linux only (`ubuntu-latest`); adds roughly a minute to boot
+- Works on every runner OS: Linux gets XFCE, macOS and Windows get
+  the runner's real desktop over VNC
+- Adds roughly a minute to boot
 - The desktop asks for your session password — type only its **first 8
   characters** (a VNC protocol limit)
 - The screen is 1600x900 and scales to your window
@@ -175,6 +179,9 @@ masked), plus a status comment on the commit. Control via commit message:
 - [x] `giecko cancel` — kill a session from your laptop
 - [x] `giecko local` — the whole stack on your machine, no GitHub
 - [x] `giecko launch --restore <run-id>` — continue a previous session's files
+- [x] Desktop on every runner OS (macOS and Windows over VNC)
+- [x] Auto-update + `giecko update` / `-upd`
+- [x] Plugins (`gcko.pkg-*`) and `giecko changelog`
 - [ ] Full plan: [ROADMAP.md](ROADMAP.md)
 - [ ] Pick runner region (needs self-hosted runners — the true lag fix)
 

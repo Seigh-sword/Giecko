@@ -29,11 +29,14 @@ itself lives elsewhere, so anything in the editor is safe to delete.
 
 `giecko ls` lists recent sessions and save branches. `giecko watch <run-id>`
 waits for one run to go live. `giecko cancel [run-id]` stops a running
-session. `giecko local` runs the stack on your own machine, no GitHub.
+session. `giecko local` runs the stack on your own machine, no GitHub. `giecko update` / `giecko -upd`
+updates the CLI and session files, `giecko plugin -i gcko.pkg-<name>` installs
+session plugins, `giecko changelog` prints the changelog.
 
 Every interactive prompt has a flag equivalent; see `giecko help`.
 Pass --yes to launch without the review menu, --restore <run-id> to
-continue a previous session's files.
+continue a previous session's files. Session files update themselves on
+launch; pass --nr to keep the existing ones.
 Config and tokens live in `~/.config/giecko/config.json` (mode 0600).
 
 Development:

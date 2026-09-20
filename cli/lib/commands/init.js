@@ -174,7 +174,7 @@ async function run(argv, cfg, store) {
     mode = await pick("Session mode (one link per session)", [
       { value: "ide", label: "IDE (VS Code in the browser)" },
       { value: "cli", label: "CLI (terminal in the browser)" },
-      { value: "desktop", label: "Desktop (a full GUI OS in the browser, Linux only)" },
+      { value: "desktop", label: "Desktop (a full GUI OS in the browser)" },
     ]);
   }
   mode = mode || "ide";
