@@ -844,12 +844,12 @@ if [ "$STACK" = "desktop" ]; then
     fi
   elif [ "$IS_WINDOWS" = 1 ]; then
     echo "  windows desktop: installing TightVNC..."
+    tvn_args="SET_ALLOWLOOPBACK=1 VALUE_OF_ALLOWLOOPBACK=1"
     if [ -n "$VNC_PW" ]; then
-      choco install tightvnc -y --params "/PASSWORD:$VNC_PW" >/dev/null 2>&1 || fail "tightvnc install failed (password mode)"
-    else
-      choco install tightvnc -y >/dev/null 2>&1 || fail "tightvnc install failed"
+      tvn_args="$tvn_args SET_USEVNCAUTHENTICATION=1 VALUE_OF_USEVNCAUTHENTICATION=1 SET_PASSWORD=1 VALUE_OF_PASSWORD=$VNC_PW"
     fi
-    MSYS_NO_PATHCONV=1 reg add "HKLM\SOFTWARE\TightVNC\Server" /v AllowLoopback /t REG_DWORD /d 1 /f >/dev/null 2>&1 || echo "  (64-bit reg add failed)"
+    choco install tightvnc -y --installArguments "$tvn_args" >/dev/null 2>&1 || fail "tightvnc install failed"
+    MSYS_NO_PATHCONV=1 reg add "HKLM\SOFTWARE\TightVNC\Server" /v AllowLoopback /t REG_DWORD /d 1 /f >/dev/null 2>&1 || true
     MSYS_NO_PATHCONV=1 reg add "HKLM\SOFTWARE\WOW6432Node\TightVNC\Server" /v AllowLoopback /t REG_DWORD /d 1 /f >/dev/null 2>&1 || true
     (net stop tvnserver >/dev/null 2>&1 || true)
     (net start tvnserver >/dev/null 2>&1 || true)
