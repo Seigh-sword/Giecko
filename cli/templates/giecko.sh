@@ -826,7 +826,9 @@ while [ "$SECONDS" -lt "$END" ]; do
       kill -0 "$(cat "$RUNDIR/desk-tunnel.pid" 2>/dev/null)" 2>/dev/null || { tail -n 20 "$RUNDIR/desk-tunnel.log" || true; fail "desktop tunnel died mid-run"; }
     fi
     kill -0 "$(cat "$RUNDIR/novnc.pid" 2>/dev/null)" 2>/dev/null || { tail -n 20 "$RUNDIR/novnc.log" || true; fail "noVNC died mid-run"; }
-    kill -0 "$(cat "$RUNDIR/xvfb.pid" 2>/dev/null)" 2>/dev/null || fail "Xvfb died mid-run"
+    if [ "$OSNAME" = "Linux" ]; then
+      kill -0 "$(cat "$RUNDIR/xvfb.pid" 2>/dev/null)" 2>/dev/null || fail "Xvfb died mid-run"
+    fi
   fi
   HEARTBEATS=$((HEARTBEATS + 1))
   REM_MIN=$(((END - SECONDS) / 60))
