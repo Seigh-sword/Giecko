@@ -529,6 +529,8 @@ if [ "$NEED_CODE" = 1 ]; then
   if [ "$up" = 1 ]; then CODE_OK=1; echo " code-server is up"
   elif [ "$CODE_REQUIRED" = 1 ]; then tail -n 10 "$RUNDIR/code-server.log" || true; fail "code-server failed but stack=vscode needs it"
   else echo "  code-server didn't start, continuing terminal-only:"; tail -n 10 "$RUNDIR/code-server.log" || true; fi
+fi
+
 if [ "$STACK" = "desktop" ]; then
   echo "  starting desktop (Xvfb + XFCE + x11vnc + noVNC)..."
   rm -f "$RUNDIR"/xvfb.log "$RUNDIR"/xfce.log "$RUNDIR"/x11vnc.log "$RUNDIR"/novnc.log "$RUNDIR"/xvfb.pid "$RUNDIR"/xfce.pid "$RUNDIR"/x11vnc.pid "$RUNDIR"/novnc.pid
