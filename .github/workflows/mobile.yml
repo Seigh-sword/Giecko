@@ -2,6 +2,7 @@ name: mobile
 on:
   push:
     branches: [arena/01a09a7b-giecko]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -9,7 +10,7 @@ permissions:
 
 jobs:
   android:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[mobile]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || contains(github.event.head_commit.message, '[mobile]')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -42,6 +43,7 @@ jobs:
       - name: attach to release
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          gh release upload "${GITHUB_REF_NAME}" mobile/android/app/build/outputs/apk/release/*.apk --clobber
+          cp mobile/android/app/build/outputs/apk/release/app-release.apk "giecko-${GITHUB_REF_NAME}-android.apk" || cp mobile/android/app/build/outputs/apk/release/*.apk "giecko-${GITHUB_REF_NAME}-android.apk"
+          gh release upload "${GITHUB_REF_NAME}" "giecko-${GITHUB_REF_NAME}-android.apk" --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
