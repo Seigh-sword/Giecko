@@ -85,9 +85,9 @@ Every target cross-compiles with `zig cc` (install zig, then
 | `make apple-silicon64` `make darwin-intel64` | macOS |
 | `make freebsd-amd64` `make freebsd-arm64` | FreeBSD |
 | `make openbsd-amd64` `make netbsd-amd64` | OpenBSD, NetBSD |
-| `make android-arm64` | Android (via termux or the app) |
+| `make android-arm64` | Android (needs an NDK to link, not in the CI matrix) |
 
-`make matrix` builds everything. The CI workflow
+`make matrix` builds everything the CI covers. The CI workflow
 (`tiny-giecko.yml`) builds the whole matrix on every `[tiny]` push and
 runs the protocol tests on Linux, macOS and Windows.
 

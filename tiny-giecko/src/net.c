@@ -64,7 +64,11 @@ int gg_tcp_connect(const char *host, const char *port, int timeout_secs)
     if (getaddrinfo(host, port, &hints, &res) != 0)
         return GG_BAD;
     for (p = res; p; p = p->ai_next) {
+#ifdef _WIN32
+        fd = (int)socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+#else
         fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+#endif
         if (fd == GG_BAD)
             continue;
         gg_set_blocking(fd, 0);

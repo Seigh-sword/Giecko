@@ -33,7 +33,7 @@ build/tiny-giecko-$(1): $(SRC) $(HDR)
 ifeq ($$(ZIG),)
 	@echo "zig not found: $(1) cross-builds with zig cc (https://ziglang.org)"; exit 1
 else
-	$(ZIG) cc -target $(2) -std=c99 -O2 -Wall -Wextra $(INCLUDES) -o $$@ $(SRC)
+	$(ZIG) cc -target $(2) -std=c99 -O2 -Wall -Wextra $(INCLUDES) -o $$@ $(SRC) $(3)
 endif
 endef
 
@@ -46,8 +46,8 @@ $(eval $(call CROSS_RULE,rasp5,aarch64-linux-musl -mcpu=cortex_a76))
 $(eval $(call CROSS_RULE,linux-x86_64,x86_64-linux-musl))
 $(eval $(call CROSS_RULE,linux-arm64,aarch64-linux-musl))
 $(eval $(call CROSS_RULE,linux-arm,arm-linux-musleabihf))
-$(eval $(call CROSS_RULE,win64,x86_64-windows-gnu))
-$(eval $(call CROSS_RULE,win-arm64,aarch64-windows-gnu))
+$(eval $(call CROSS_RULE,win64,x86_64-windows-gnu,-lws2_32))
+$(eval $(call CROSS_RULE,win-arm64,aarch64-windows-gnu,-lws2_32))
 $(eval $(call CROSS_RULE,apple-silicon64,aarch64-macos))
 $(eval $(call CROSS_RULE,darwin-intel64,x86_64-macos))
 $(eval $(call CROSS_RULE,freebsd-amd64,x86_64-freebsd))
@@ -75,7 +75,7 @@ openbsd-amd64: build/tiny-giecko-openbsd-amd64
 netbsd-amd64: build/tiny-giecko-netbsd-amd64
 android-arm64: build/tiny-giecko-android-arm64
 
-CROSS_TARGETS = rasp0 rasp1 rasp2 rasp3 rasp4 rasp5 linux-x86_64 linux-arm64 linux-arm win64 win-arm64 apple-silicon64 darwin-intel64 freebsd-amd64 freebsd-arm64 openbsd-amd64 netbsd-amd64 android-arm64
+CROSS_TARGETS = rasp0 rasp1 rasp2 rasp3 rasp4 rasp5 linux-x86_64 linux-arm64 linux-arm win64 win-arm64 apple-silicon64 darwin-intel64 freebsd-amd64 freebsd-arm64 openbsd-amd64 netbsd-amd64
 
 matrix:
 	@for t in $(CROSS_TARGETS); do echo "== $$t"; $(MAKE) $$t || exit 1; done
