@@ -68,8 +68,7 @@ jobs:
       - name: protocol test
         shell: bash
         run: |
-          cp tiny-giecko/build/tiny-giecko-win64.exe tiny-giecko/build/tiny-giecko
-          bash -c 'cd tiny-giecko && BIN=./build/tiny-giecko && python test/mock_server.py --mode rfb --port 15931 --password test-gie >/dev/null 2>&1 & sleep 2; $BIN vnc://127.0.0.1:15931 --password test-gie --seconds 2; rc=$?; kill %1 2>/dev/null; exit $rc'
+          bash -c 'cd tiny-giecko; BIN=./build/tiny-giecko-win64.exe; python test/mock_server.py --mode rfb --port 15931 --password test-gie >/dev/null 2>&1 & sleep 2; $BIN vnc://127.0.0.1:15931 --password test-gie --seconds 2; rc=$?; kill %1 2>/dev/null; exit $rc'
       - uses: actions/upload-artifact@v4
         with:
           name: tiny-giecko-windows
