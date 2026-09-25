@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Giecko",
+    "slug": "giecko",
+    "version": "0.6.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0b0e14",
+    "android": {
+      "package": "io.github.seighsword.giecko",
+      "edgeToEdgeEnabled": true
+    },
+    "ios": {
+      "bundleIdentifier": "io.github.seighsword.giecko"
+    },
+    "plugins": []
+  }
+}

@@ -1,0 +1,47 @@
+name: mobile
+on:
+  push:
+    branches: [arena/01a09a7b-giecko]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[mobile]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: install
+        run: npm ci
+        working-directory: mobile
+      - name: prebuild
+        run: npx expo prebuild -p android --no-install
+        working-directory: mobile
+      - name: apk
+        run: |
+          cd mobile/android
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+      - name: artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: giecko-android
+          path: mobile/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+      - name: attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" mobile/android/app/build/outputs/apk/release/*.apk --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

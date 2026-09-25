@@ -106,6 +106,37 @@ a machine, not a tab.
   snapshots the same workspace
 
 
+## 🖥️ tiny-giecko: no browser needed
+
+`tiny-giecko/` is a native client written in portable C99 with zero
+runtime dependencies. If a machine has internet and a display, it can
+show your Giecko desktop: it speaks the session's WebSocket/VNC
+protocol directly (classic VNC DES auth included) and draws the
+framebuffer itself. One codebase, one `make` per target:
+
+```
+make rasp0 rasp1 rasp2 rasp3 rasp4 rasp5     Raspberry Pi Zero to 5
+make linux-x86_64 linux-arm64 linux-arm      any Linux
+make win64 win-arm64                         Windows
+make apple-silicon64 darwin-intel64          macOS
+make freebsd-amd64 freebsd-arm64             FreeBSD
+make openbsd-amd64 netbsd-amd64 android-arm64   and more
+```
+
+Cross-builds use `zig cc`; `make test` runs the protocol tests against
+a local mock server, and CI builds the whole matrix on every `[tiny]`
+push. Today it is a viewer (Raw encoding, headless + Linux fbdev
+display); keyboard/mouse input and more encodings are on the way. See
+`tiny-giecko/README.md`.
+
+## 📱 Giecko on your phone
+
+`mobile/` is the iOS and Android app (React Native + Expo): a guide,
+one-tap session launch (runner OS, stack, password, duration), your
+recent runs, and the session itself opening inside the app. The
+`mobile.yml` workflow builds the Android APK on every `[mobile]` push
+and attaches it to `v*` releases — check the repo's Releases page.
+
 ## 🔁 Tab crashed? Just reopen it
 
 Sessions live on the runner, not in your tab: the shell runs in `tmux`

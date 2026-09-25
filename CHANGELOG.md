@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.6.0
+
+- New: tiny-giecko, a native client in portable C99 with no runtime
+  dependencies. It connects to your session over WebSocket or raw VNC,
+  does the classic VNC DES authentication itself and draws the
+  framebuffer - no browser needed. 18 make targets from Raspberry Pi
+  Zero to Windows, macOS and the BSDs (cross-builds via zig cc), a
+  built-in --selftest with FIPS DES vectors, and a mock-server protocol
+  test suite that CI runs on Linux, macOS and Windows. Today it is a
+  viewer: Raw encoding, headless and Linux fbdev display; input and
+  more encodings come next
+- New: the mobile app (React Native + Expo) for iOS and Android:
+  built-in guide, one-tap session launch, run list and the session
+  opening inside the app. CI builds the Android APK on [mobile] pushes
+  and attaches it to v* releases
+- CI: tiny-giecko.yml (build the whole cross matrix, run the protocol
+  tests) and mobile.yml (APK release builds)
+
 ## 0.5.1
 
 - Fixed: the macOS desktop login rejected the right password. The

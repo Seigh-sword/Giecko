@@ -1,0 +1,76 @@
+name: tiny-giecko
+on:
+  push:
+    branches: [arena/01a09a7b-giecko]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[tiny]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - name: deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev
+          curl -sL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ -C "$HOME"
+          echo "$HOME/zig-linux-x86_64-0.13.0" >> "$GITHUB_PATH"
+      - name: build and test
+        run: make -C tiny-giecko test
+      - name: tls build and test
+        run: make -C tiny-giecko tls
+      - name: cross matrix
+        run: make -C tiny-giecko matrix
+      - name: upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiny-giecko-linux-matrix
+          path: tiny-giecko/build/
+          if-no-files-found: error
+
+  macos:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[tiny]')
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: build and test
+        run: make -C tiny-giecko CC=cc test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tiny-giecko-macos
+          path: tiny-giecko/build/
+          if-no-files-found: error
+
+  windows:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[tiny]')
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: zig
+        shell: bash
+        run: |
+          curl -sL https://ziglang.org/download/0.13.0/zig-windows-x86_64-0.13.0.zip -o "$TEMP/zig.zip"
+          unzip -q "$TEMP/zig.zip" -d "$TEMP"
+          echo "$TEMP/zig-windows-x86_64-0.13.0" >> "$GITHUB_PATH"
+      - name: build win64 and selftest
+        shell: bash
+        run: |
+          make -C tiny-giecko win64
+          ./tiny-giecko/build/tiny-giecko-win64.exe --selftest
+      - name: protocol test
+        shell: bash
+        run: |
+          cp tiny-giecko/build/tiny-giecko-win64.exe tiny-giecko/build/tiny-giecko
+          bash -c 'cd tiny-giecko && BIN=./build/tiny-giecko && python test/mock_server.py --mode rfb --port 15931 --password test-gie >/dev/null 2>&1 & sleep 2; $BIN vnc://127.0.0.1:15931 --password test-gie --seconds 2; rc=$?; kill %1 2>/dev/null; exit $rc'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tiny-giecko-windows
+          path: tiny-giecko/build/
+          if-no-files-found: error

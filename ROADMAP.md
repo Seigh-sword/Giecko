@@ -1,6 +1,6 @@
 # Giecko Roadmap
 
-Where Giecko is headed. Current release: 0.5.1.
+Where Giecko is headed. Current release: 0.6.0.
 
 ## Done
 
