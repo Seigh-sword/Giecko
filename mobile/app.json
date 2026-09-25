@@ -5,7 +5,10 @@
     "version": "0.6.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0b0e14",
+    "splash": {
+      "backgroundColor": "#0b0e14",
+      "resizeMode": "contain"
+    },
     "android": {
       "package": "io.github.seighsword.giecko",
       "edgeToEdgeEnabled": true

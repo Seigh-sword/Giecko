@@ -83,8 +83,8 @@ Every target cross-compiles with `zig cc` (install zig, then
 | `make linux-x86_64` `make linux-arm64` `make linux-arm` | any Linux |
 | `make win64` `make win-arm64` | Windows |
 | `make apple-silicon64` `make darwin-intel64` | macOS |
-| `make freebsd-amd64` `make freebsd-arm64` | FreeBSD |
-| `make openbsd-amd64` `make netbsd-amd64` | OpenBSD, NetBSD |
+| `make freebsd-amd64` `make freebsd-arm64` | FreeBSD (build natively on the BSD box: zig ships no BSD libc for cross builds) |
+| `make openbsd-amd64` `make netbsd-amd64` | OpenBSD, NetBSD (same: native builds) |
 | `make android-arm64` | Android (needs an NDK to link, not in the CI matrix) |
 
 `make matrix` builds everything the CI covers. The CI workflow

@@ -75,7 +75,7 @@ openbsd-amd64: build/tiny-giecko-openbsd-amd64
 netbsd-amd64: build/tiny-giecko-netbsd-amd64
 android-arm64: build/tiny-giecko-android-arm64
 
-CROSS_TARGETS = rasp0 rasp1 rasp2 rasp3 rasp4 rasp5 linux-x86_64 linux-arm64 linux-arm win64 win-arm64 apple-silicon64 darwin-intel64 freebsd-amd64 freebsd-arm64 openbsd-amd64 netbsd-amd64
+CROSS_TARGETS = rasp0 rasp1 rasp2 rasp3 rasp4 rasp5 linux-x86_64 linux-arm64 linux-arm win64 win-arm64 apple-silicon64 darwin-intel64
 
 matrix:
 	@for t in $(CROSS_TARGETS); do echo "== $$t"; $(MAKE) $$t || exit 1; done

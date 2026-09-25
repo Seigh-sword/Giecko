@@ -7,8 +7,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
-#define GG_CLOSE closesocket
-#define GG_BAD INVALID_SOCKET
+#define GG_CLOSE(fd) closesocket((SOCKET)(fd))
+#define GG_BAD (-1)
 #else
 #include <sys/socket.h>
 #include <sys/types.h>

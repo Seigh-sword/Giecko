@@ -63,6 +63,7 @@ jobs:
         shell: bash
         run: |
           make -C tiny-giecko win64
+          [ -f tiny-giecko/build/tiny-giecko-win64.exe ] || mv tiny-giecko/build/tiny-giecko-win64 tiny-giecko/build/tiny-giecko-win64.exe
           ./tiny-giecko/build/tiny-giecko-win64.exe --selftest
       - name: protocol test
         shell: bash
