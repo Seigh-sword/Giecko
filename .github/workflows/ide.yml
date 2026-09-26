@@ -88,7 +88,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: github.event_name == 'workflow_dispatch' && inputs.upload_release
+    if: (github.event_name == 'workflow_dispatch' && inputs.upload_release) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[release]'))
     needs: [terminal, ide]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -103,11 +103,18 @@ jobs:
       - name: upload to release
         run: |
           ls -la dist/
-          TAG="v${{ inputs.version }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VER='${{ inputs.version }}'
+          else
+            VER="$(sed -n 's/^GIECKO_IDE_VERSION="${GIECKO_IDE_VERSION:-\([0-9][0-9.]*\)}"$/\1/p' ide/build-ide.sh)"
+          fi
+          [ -n "$VER" ] || { echo "no version resolved"; exit 1; }
+          echo "releasing GIECKO $VER"
+          TAG="v$VER"
           if gh release view "$TAG" -R "$GITHUB_REPOSITORY"; then
             echo "release $TAG exists, uploading assets"
           else
-            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" -t "GIECKO ${{ inputs.version }}" -F ide/release-notes.md
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" -t "GIECKO $VER" -F ide/release-notes.md
           fi
           gh release upload "$TAG" dist/* -R "$GITHUB_REPOSITORY" --clobber
         env:

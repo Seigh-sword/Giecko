@@ -21,3 +21,5 @@ New in sessions:
 - IDE settings seeded with the GIECKO palette
 
 Mobile app unchanged; APK for this release is attached below.
+
+Released: 2026-09-26
