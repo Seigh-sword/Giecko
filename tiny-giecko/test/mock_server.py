@@ -28,6 +28,14 @@ SBOX = [
 PP = [16, 7, 20, 21, 29, 12, 28, 17, 1, 15, 23, 26, 5, 18, 31, 10, 2, 8, 24, 14, 32, 27, 3, 9, 19, 13, 30, 6, 22, 11, 4, 25]
 
 
+def log_input(line):
+    path = os.environ.get("GG_MOCK_INPUT_LOG", "")
+    if not path:
+        return
+    with open(path, "a") as fh:
+        fh.write(line + "\n")
+
+
 def bit(v, width, n):
     return (v >> (width - n)) & 1
 
@@ -159,9 +167,15 @@ def serve_rfb(read, write, password, open_session):
             n = struct.unpack(">H", read(2))[0]
             read(n * 4)
         elif t == 3:
-            read(10)
+            read(9)
             rw, rh = 64, 48
             write(struct.pack(">BBH", 0, 0, 1) + struct.pack(">HHHHi", 0, 0, rw, rh, 0) + os.urandom(rw * rh * 4))
+        elif t == 4:
+            body = read(7)
+            log_input("key %d %d" % (body[0], struct.unpack(">I", body[3:7])[0]))
+        elif t == 5:
+            body = read(5)
+            log_input("ptr %d %d %d" % (body[0], struct.unpack(">H", body[1:3])[0], struct.unpack(">H", body[3:5])[0]))
         else:
             return
 

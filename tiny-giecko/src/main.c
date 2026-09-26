@@ -5,6 +5,8 @@
 #include "ws.h"
 #include "rfb.h"
 #include "display.h"
+#include "qr.h"
+#include "tui.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,6 +44,8 @@ static void gg_hex_str(unsigned long long v, char out[17])
         out[i] = "0123456789abcdef"[(v >> (60 - 4 * i)) & 0xF];
     out[16] = 0;
 }
+
+static int gg_qr_selftest(void);
 
 static int gg_selftest(void)
 {
@@ -137,18 +141,68 @@ static int gg_selftest(void)
         printf("PASS b64\n");
     }
 
+    fails += gg_qr_selftest();
     printf("%s\n", fails ? "SELFTEST FAILED" : "SELFTEST PASSED");
     return fails ? 1 : 0;
+}
+
+
+static const char *GG_QR_VEC1 =
+    "111111100100001111111100000101001101000001101110101010101011101101110101010101011101101110100011101011101100000100010101000001111111101010101111111000000001101100000000100000101000111001110010110000000101010000001100110001010011110000001001100000011111000111111100001001001000000001001111001100111111100100101101110100000100011110101100101110100000100010010101110100010100010100101110100100001010011100000100100000111100111111101001010110010";
+
+static int gg_qr_selftest(void)
+{
+    unsigned char m[GG_QR_MAX_SIZE * GG_QR_MAX_SIZE];
+    int size = 0;
+    int rc;
+    int i;
+    rc = gg_qr_generate("Giecko", 6, m, &size, 1, 5);
+    if (rc != 5 || size != 21) {
+        printf("FAIL qr generate: rc=%d size=%d\n", rc, size);
+        return 1;
+    }
+    for (i = 0; i < 21 * 21; i++) {
+        int want = GG_QR_VEC1[i] == '1';
+        if (m[i] != (unsigned char)want) {
+            printf("FAIL qr vector at %d\n", i);
+            return 1;
+        }
+    }
+    if (gg_qr_generate("x", 1, m, &size, 10, 5) >= 0) {
+        static const int caps[10] = {14, 26, 42, 62, 84, 106, 122, 152, 180, 213};
+        char big[256];
+        int v;
+        for (v = 1; v <= 10; v++) {
+            int i;
+            for (i = 0; i < caps[v - 1]; i++)
+                big[i] = (char)('a' + (i % 26));
+            if (gg_qr_generate(big, caps[v - 1], m, &size, v, 0) < 0 || size != 17 + v * 4) {
+                printf("FAIL qr capacity v%d exact\n", v);
+                return 1;
+            }
+            if (gg_qr_generate(big, caps[v - 1] + 1, m, &size, v, 0) >= 0) {
+                printf("FAIL qr capacity v%d overflow\n", v);
+                return 1;
+            }
+        }
+    } else {
+        printf("FAIL qr capacity probe\n");
+        return 1;
+    }
+    printf("PASS qr capacity v1-v10\n");
+    return 0;
 }
 
 static void gg_usage(void)
 {
     fprintf(stderr,
             "tiny-giecko: native client for giecko sessions\n"
-            "usage: tiny-giecko <url> [--password PW] [--seconds N] [--display headless|fbdev]\n"
+            "usage: tiny-giecko <url> [--password PW] [--seconds N] [--tui]\n"
+            "       tiny-giecko --qr TEXT\n"
             "       tiny-giecko --selftest\n"
             "url: vnc://host[:port] | ws://host[:port]/path | wss://host[:port]/path\n"
-            "example: tiny-giecko wss://abc.trycloudflare.com/websockify --password 1234\n");
+            "--tui opens the interactive terminal view with keyboard and mouse input\n"
+            "example: tiny-giecko wss://abc.trycloudflare.com/websockify --password 1234 --tui\n");
 }
 
 int main(int argc, char **argv)
@@ -156,7 +210,8 @@ int main(int argc, char **argv)
     const char *url = NULL;
     const char *password = "";
     int seconds = 5;
-    int display_mode = 0;
+    int tui = 0;
+    const char *qrtext = NULL;
     int i;
     char scheme[8];
     const char *rest;
@@ -175,6 +230,14 @@ int main(int argc, char **argv)
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--selftest") == 0)
             return gg_selftest();
+        if (strcmp(argv[i], "--qr") == 0 && i + 1 < argc) {
+            qrtext = argv[++i];
+            continue;
+        }
+        if (strcmp(argv[i], "--tui") == 0) {
+            tui = 1;
+            continue;
+        }
         if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             gg_usage();
             return 0;
@@ -187,16 +250,23 @@ int main(int argc, char **argv)
             seconds = atoi(argv[++i]);
             continue;
         }
-        if (strcmp(argv[i], "--display") == 0 && i + 1 < argc) {
-            i++;
-            display_mode = strcmp(argv[i], "fbdev") == 0 ? 1 : 0;
-            continue;
-        }
         if (argv[i][0] == '-' && argv[i][1]) {
             gg_usage();
             return 3;
         }
         url = argv[i];
+    }
+    if (qrtext) {
+        unsigned char m[GG_QR_MAX_SIZE * GG_QR_MAX_SIZE];
+        int size = 0;
+        char out[16384];
+        if (gg_qr_generate(qrtext, -1, m, &size, 0, -1) < 0) {
+            fprintf(stderr, "qr: text too long\n");
+            return 3;
+        }
+        gg_qr_render(m, size, 2, out, sizeof(out));
+        fputs(out, stdout);
+        return 0;
     }
     if (!url) {
         gg_usage();
@@ -292,8 +362,37 @@ int main(int argc, char **argv)
         return rc == 1 ? 1 : 2;
     }
     printf("connected: %s %ux%u \"%s\" auth=%s\n", rfb.version, rfb.width, rfb.height, rfb.name, rfb.auth_type == 2 ? "vnc" : "none");
-    gg_display_init(display_mode);
-    rc = gg_rfb_run(&rfb, seconds, display_mode, &updates, &pixels);
+    {
+        unsigned char qm[GG_QR_MAX_SIZE * GG_QR_MAX_SIZE];
+        int qsize = 0;
+        char qout[16384];
+        printf("============================================================\n");
+        printf("   GIECKO SESSION CONNECTED\n");
+        printf("============================================================\n");
+        printf("   url:      %s\n", url);
+        printf("   size:     %ux%u  auth: %s\n", rfb.width, rfb.height, rfb.auth_type == 2 ? "vnc password" : "open");
+        if (tui)
+            printf("   view:     live in this terminal, Ctrl-Q quits\n");
+        else
+            printf("   view:     headless check for %d seconds\n", seconds);
+        printf("============================================================\n");
+        if (gg_qr_generate(url, -1, qm, &qsize, 0, -1) >= 0) {
+            printf("   scan to open on a phone:\n");
+            gg_qr_render(qm, qsize, 2, qout, sizeof(qout));
+            fputs(qout, stdout);
+        }
+        printf("============================================================\n");
+        fflush(stdout);
+    }
+    if (gg_display_init(rfb.width, rfb.height, rfb.bpp) != 0) {
+        fprintf(stderr, "display init failed for %ux%u\n", rfb.width, rfb.height);
+        return 2;
+    }
+    if (tui) {
+        rc = gg_rfb_run_tui(&rfb, &updates, &pixels);
+    } else {
+        rc = gg_rfb_run(&rfb, seconds, &updates, &pixels);
+    }
     gg_display_fini();
     if (rc != 0) {
         fprintf(stderr, "session: %s\n", rfb.err[0] ? rfb.err : "failed");

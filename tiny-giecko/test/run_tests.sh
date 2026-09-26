@@ -54,4 +54,9 @@ if [ "${TG_TLS_TESTS:-0}" = "1" ]; then
   stop_mock
 fi
 
-[ "$FAILS" -eq 0 ] && { say "ALL TESTS PASSED"; exit 0; } || { say "$FAILS TESTS FAILED"; exit 1; }
+[ "$FAILS" -eq 0 ] && { if command -v python3 >/dev/null 2>&1 && python3 -c "import pty" >/dev/null 2>&1; then
+  python3 test/tui_input_test.py
+  [ $? -eq 0 ] && say "PASS tui input" || die "tui input"
+fi
+
+say "ALL TESTS PASSED"; exit 0; } || { say "$FAILS TESTS FAILED"; exit 1; }

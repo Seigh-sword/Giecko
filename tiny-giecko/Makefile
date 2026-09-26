@@ -2,8 +2,8 @@ NAME = tiny-giecko
 CC ?= cc
 CFLAGS ?= -std=c99 -O2 -Wall -Wextra
 INCLUDES = -Isrc
-SRC = src/main.c src/des.c src/sha1.c src/b64.c src/net.c src/tls.c src/ws.c src/rfb.c src/display.c
-HDR = src/des.h src/sha1.h src/b64.h src/net.h src/tls.h src/ws.h src/rfb.h src/display.h
+SRC = src/main.c src/des.c src/sha1.c src/b64.c src/net.c src/tls.c src/ws.c src/rfb.c src/display.c src/qr.c src/tui.c src/keysym.c
+HDR = src/des.h src/sha1.h src/b64.h src/net.h src/tls.h src/ws.h src/rfb.h src/display.h src/qr.h src/tui.h src/keysym.h
 BIN = build/$(NAME)
 
 ZIG = $(shell command -v zig 2>/dev/null || true)
