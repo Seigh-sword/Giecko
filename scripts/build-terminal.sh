@@ -34,6 +34,7 @@ if [ ! -f "$PREFIX/lib/libwebsockets.a" ]; then
     -DCMAKE_PREFIX_PATH="$HINTS" \
     -DLWS_WITH_SSL=OFF \
     -DLWS_WITH_SHARED=OFF \
+    -DLWS_WITH_LIBUV=ON \
     -DLWS_WITHOUT_TESTAPPS=ON
   cmake --build /tmp/lws-build -j"$JOBS"
   cmake --install /tmp/lws-build
