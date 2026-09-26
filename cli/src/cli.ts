@@ -109,6 +109,8 @@ changelog:
 
 Config and tokens live in ~/.config/giecko/config.json (mode 0600).
 Session records live in ~/.config/giecko/sessions/<run-id>/.
+Set GIECKO_CONFIG_DIR to move the whole config directory elsewhere
+(XDG_CONFIG_HOME is honored too).
 Full terms: TERMS.md in the Giecko repository.`;
 
 export async function main(): Promise<void> {

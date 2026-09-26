@@ -46,6 +46,8 @@ const fs = __importStar(require("fs"));
 const os = __importStar(require("os"));
 const path = __importStar(require("path"));
 function configDir() {
+    if (process.env.GIECKO_CONFIG_DIR)
+        return process.env.GIECKO_CONFIG_DIR;
     if (process.env.XDG_CONFIG_HOME)
         return path.join(process.env.XDG_CONFIG_HOME, "giecko");
     return path.join(os.homedir(), ".config", "giecko");

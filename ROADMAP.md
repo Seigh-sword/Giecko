@@ -1,6 +1,6 @@
 # Giecko Roadmap
 
-Where Giecko is headed. Current release: 0.6.0.
+Where Giecko is headed. Current release: 0.7.0.
 
 ## Done
 
@@ -28,6 +28,17 @@ Where Giecko is headed. Current release: 0.6.0.
   desktop connects at all now (TightVNC loopback and password were
   both broken), and every desktop session self-checks its VNC login at
   boot (the vnc_auth line in the report)
+- 0.6.0 - tiny-giecko (the native C99 client) and the mobile app
+  (React Native + Expo, APK attached to releases); mobile CLI parity
+  with in-app WebView sessions
+- 0.7.0 - GIECKO IDE (code-server remade: gecko branding, no Copilot,
+  Open VSX, 34 extensions bundled, our IDE extension with panel and
+  status bar) and GIECKO Terminal (ttyd remade: GIECKO UI, mobile
+  friendly, our favicons baked in - no proxy needed); sessions install
+  both from our releases first; giecko timeleft / room / rooms /
+  persist; opt-in persistent home (giecko-home branch); release
+  automation via the ide workflow ([release] commits build and attach
+  all bundles; npm stays manual); GIECKO_CONFIG_DIR override
 
 ## Next
 
@@ -35,15 +46,9 @@ Where Giecko is headed. Current release: 0.6.0.
   latency is the round trip from you to the runner and back. What
   actually helps: local keystroke buffering (the VS Code link already
   does this) and self-hosted runners near you.
-- Desktop mode with audio and clipboard sync (the noVNC clipboard panel
-  already syncs text; audio needs a different transport).
-- Persistent home directories between sessions (opt-in).
-- First-class mobile layout for the terminal.
-- Multi-session workspaces: one runner, several named rooms.
-- Release automation: tagged commits publish to npm after tests pass.
-- Replacing the ttyd and code-server favicons too (they are baked into
-  the binaries; needs a fronting proxy).
-- Config directory override (XDG-style) beyond --config.
+- Desktop mode with audio sync (the noVNC clipboard panel already
+  syncs text; audio needs a different transport).
+- C# support in GIECKO IDE (needs an open language server on Open VSX).
 
 ## Parked / research
 

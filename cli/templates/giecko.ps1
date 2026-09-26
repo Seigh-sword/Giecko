@@ -622,7 +622,12 @@ GIECKO_PERSIST='$PersistHome'
 "@
 $BootSecs = [int]((Get-Date) - $BootStart).TotalSeconds
 $EndEpoch = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $DurationI * 60 - $BootSecs
-Set-Content -Path (Join-Path $env:USERPROFILE ".giecko.env") -Value $envContent
+if ($env:GIECKO_CONFIG_DIR) {
+  New-Item -ItemType Directory -Force -Path $env:GIECKO_CONFIG_DIR | Out-Null
+  Set-Content -Path (Join-Path $env:GIECKO_CONFIG_DIR "giecko.env") -Value $envContent
+} else {
+  Set-Content -Path (Join-Path $env:USERPROFILE ".giecko.env") -Value $envContent
+}
 $DispTerm = Pub-Url $UrlTerm
 $DispCode = Pub-Url $UrlCode
 $DispDesk = Pub-Url $UrlDesk

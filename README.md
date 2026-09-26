@@ -49,7 +49,9 @@ giecko plugin -i gcko.pkg-<name>   # install a session plugin
 too (`giecko help`). One config per directory (`.giecko.json`; `giecko init
 --config PATH` puts it anywhere you like), tokens in
 `~/.config/giecko/config.json` (0600). Every launch records the session
-under `~/.config/giecko/sessions/<run-id>/` (`giecko ls` lists them). First run asks you to accept the
+under `~/.config/giecko/sessions/<run-id>/` (`giecko ls` lists them). Set
+`GIECKO_CONFIG_DIR` (or `XDG_CONFIG_HOME`) to move the whole config
+directory. First run asks you to accept the
 [terms](TERMS.md) (type `yes`).
 
 Prefer bash? `scripts/giecko` does `up`/`ls`/`watch` the same way —

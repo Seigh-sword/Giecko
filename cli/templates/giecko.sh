@@ -71,7 +71,9 @@ priv() { if [ -n "$SUDO" ]; then $SUDO "$@"; else "$@"; fi; }
 
 if [ "$CAN_ROOT" = 1 ]; then BIN_DIR="/usr/local/bin"; else BIN_DIR="$HOME/.local/bin"; mkdir -p "$BIN_DIR"; fi
 export PATH="$BIN_DIR:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
-if [ "$CAN_ROOT" = 1 ]; then ENV_FILE="/etc/giecko.env"; else ENV_FILE="$HOME/.giecko.env"; fi
+if [ -n "${GIECKO_CONFIG_DIR:-}" ]; then
+  ENV_FILE="$GIECKO_CONFIG_DIR/giecko.env"; mkdir -p "$GIECKO_CONFIG_DIR"
+elif [ "$CAN_ROOT" = 1 ]; then ENV_FILE="/etc/giecko.env"; else ENV_FILE="$HOME/.giecko.env"; fi
 
 fail() {
   trap - ERR
