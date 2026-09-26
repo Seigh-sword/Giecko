@@ -1,15 +1,14 @@
 ms-python.python
 ms-python.debugpy
-ms-vscode.cpptools
+llvm-vs-code-extensions.vscode-clangd
 golang.go
 rust-lang.rust-analyzer
 redhat.java
 vscjava.vscode-java-pack
 sumneko.lua
 shopify.ruby-lsp
-bmewburn.vscode-intellephense-client
+devsense.phptools-vscode
 dart-code.dart-code
-ms-dotnettools.csharp
 redhat.vscode-yaml
 tamasfe.even-better-toml
 vue.volar
@@ -33,4 +32,3 @@ gruntfuggly.todo-tree
 aaron-bond.better-comments
 yzhang.markdown-all-in-one
 ms-azuretools.vscode-docker
-ms-vscode-remote.remote-ssh

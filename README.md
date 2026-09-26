@@ -172,7 +172,7 @@ What we did about it:
 
 The VS Code in your session is **GIECKO IDE** — code-server remade: our
 gecko branding and icons everywhere, Copilot and chat stripped
-completely, Open VSX gallery, telemetry off, and 36 extensions bundled
+completely, Open VSX gallery, telemetry off, and 34 extensions bundled
 (10+ languages, themes, icon themes, utilities). The status bar shows
 run info + time left; the GIECKO panel (⌘/Ctrl+Shift+P → `GIECKO:
 open panel`) has session URLs, QR codes, save / rooms / timeleft
@@ -258,7 +258,7 @@ masked), plus a status comment on the commit. Control via commit message:
 - [x] Browser reconnect after a tab crash (tmux keeps the session)
 - [x] Desktop favicon: lizard + repo avatar (noVNC)
 - [x] ISC license
-- [x] GIECKO IDE: code-server remade (gecko branding, no Copilot, 36 extensions)
+- [x] GIECKO IDE: code-server remade (gecko branding, no Copilot, 34 extensions)
 - [x] GIECKO Terminal: ttyd remade (GIECKO UI, mobile friendly)
 - [x] GIECKO IDE extension: panel, status bar countdown, in-IDE save/rooms
 - [x] Named rooms: `giecko room NAME` + `giecko rooms`

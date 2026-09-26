@@ -6,7 +6,7 @@ GIECKO IDE (code-server 4.139.1 based):
 - Rebranded: GIECKO IDE names, gecko favicon and icons everywhere
 - Copilot and chat extensions stripped completely
 - Open VSX gallery, telemetry off, update checks off
-- 36 extensions bundled: Python, C/C++, Go, Rust, Java, C#, Lua, Ruby, PHP, Dart, YAML, TOML, Vue, Svelte, themes (One Dark, Dracula, Night Owl, GitHub), icon themes, Prettier, ESLint, Error Lens, GitLens, Code Runner, Live Server, Docker, Remote SSH and more
+- 34 extensions bundled: Python, C/C++ (clangd), Go, Rust, Java, Lua, Ruby, PHP, Dart, YAML, TOML, Vue, Svelte, themes (One Dark, Dracula, Night Owl, GitHub), icon themes, Prettier, ESLint, Error Lens, GitLens, Code Runner, Live Server, Docker and more
 - GIECKO IDE extension: status bar with run info + time left, control panel with session URLs, QR codes, save / rooms / timeleft / persist commands, opt-in autosave
 - GIECKO terminal: xterm with fit addon, mobile friendly, gecko UI
 

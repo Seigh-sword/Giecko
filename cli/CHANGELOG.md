@@ -4,7 +4,7 @@
 
 - New: GIECKO IDE, our remade code-server. Rebranded end to end with
   the gecko icons, Copilot and chat stripped completely, Open VSX
-  gallery, telemetry off, and 36 extensions bundled (10+ languages,
+  gallery, telemetry off, and 34 extensions bundled (10+ languages,
   themes, icon themes, utilities and tooling). Builds for
   linux-x86_64, linux-aarch64, darwin-x86_64 and darwin-aarch64 via
   ide/build-ide.sh, attached to releases by the ide workflow

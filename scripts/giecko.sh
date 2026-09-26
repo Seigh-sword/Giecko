@@ -241,6 +241,10 @@ sys_pkgs() {
   priv apt-get install -y -qq tmux tree jq htop zip unzip sqlite3 qrencode lrzsz "${EPA[@]}" \
     || echo "  some apt packages failed (run the install command live to retry)"
   priv apt-get install -y -qq fastfetch 2>/dev/null || true
+  if [ "$NEED_CODE" = 1 ]; then
+    echo " apt: installing clangd for C/C++ in the IDE..."
+    priv apt-get install -y -qq clangd 2>/dev/null || echo "  clangd install failed, C/C++ intellisense will be limited"
+  fi
   if [ "$STACK" = "desktop" ]; then
     echo " apt: installing desktop (XFCE + noVNC)..."
     priv apt-get install -y -qq --no-install-recommends xvfb x11vnc novnc websockify dbus dbus-x11 x11-xserver-utils xfce4 xfce4-terminal thunar xterm fonts-dejavu-core adwaita-icon-theme \
