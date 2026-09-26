@@ -1,0 +1,114 @@
+name: GIECKO IDE Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'GIECKO IDE version to build and tag'
+        required: false
+        default: '0.7.0'
+      upload_release:
+        description: 'Upload artifacts to the v<version> GitHub release (creates it if missing)'
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: [arena/01a09a7b-giecko]
+    paths:
+      - 'giecko-terminal/**'
+      - 'ide/**'
+      - 'scripts/build-terminal.sh'
+      - '.github/workflows/ide.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  terminal:
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ide]')
+    name: terminal ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.optional }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, name: x86_64, optional: false }
+          - { os: ubuntu-24.04-arm, name: aarch64, optional: false }
+          - { os: macos-latest, name: darwin-arm64, optional: false }
+          - { os: macos-15-intel, name: darwin-amd64, optional: true }
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: build GIECKO Terminal
+        run: |
+          chmod +x scripts/build-terminal.sh
+          ./scripts/build-terminal.sh
+
+      - name: verify
+        run: |
+          ./ide/dist/giecko-terminal-${{ matrix.name }} --version
+          sha256sum ide/dist/giecko-terminal-${{ matrix.name }} || shasum -a 256 ide/dist/giecko-terminal-${{ matrix.name }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: giecko-terminal-${{ matrix.name }}
+          path: ide/dist/giecko-terminal-${{ matrix.name }}
+          if-no-files-found: error
+
+  ide:
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip ide]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: build GIECKO IDE (all targets)
+        run: |
+          GIECKO_IDE_VERSION='${{ github.event_name == 'workflow_dispatch' && inputs.version || '0.7.0' }}' bash ide/build-ide.sh
+
+      - name: verify linux-amd64 bundle
+        run: |
+          tar -xzf ide/dist/giecko-ide-*-linux-amd64.tar.gz -C /tmp
+          d=$(find /tmp -maxdepth 1 -type d -name 'giecko-ide-*-linux-amd64' | head -n 1)
+          python3 -c "import json,sys; p=json.load(open(sys.argv[1])); assert p['nameLong']=='GIECKO IDE', p['nameLong']; print('product ok:', p['nameLong'], p.get('gieckoIdeVersion'))" "$d/lib/vscode/product.json"
+          ls "$d/lib/vscode/extensions" | wc -l
+          ls "$d/lib/vscode/extensions" | grep -qi python || { echo 'python ext missing'; exit 1; }
+          ls "$d/lib/vscode/extensions" | grep -qi copilot && { echo 'copilot still present'; exit 1; } || true
+          "$d/bin/code-server" --version
+          ls ide/dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: giecko-ide-bundles
+          path: |
+            ide/dist/giecko-ide-*.tar.gz
+            ide/dist/giecko-ide-*.vsix
+          if-no-files-found: error
+
+  release:
+    if: github.event_name == 'workflow_dispatch' && inputs.upload_release
+    needs: [terminal, ide]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: upload to release
+        run: |
+          ls -la dist/
+          TAG="v${{ inputs.version }}"
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY"; then
+            echo "release $TAG exists, uploading assets"
+          else
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" -t "GIECKO ${{ inputs.version }}" -F ide/release-notes.md
+          fi
+          gh release upload "$TAG" dist/* -R "$GITHUB_REPOSITORY" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

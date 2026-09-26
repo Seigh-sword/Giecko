@@ -6,13 +6,16 @@ param(
   [string]$AutosaveMin = "15",
   [string]$User = "giecko",
   [string]$Mask = "false",
-  [string]$Distro = "runner"
+  [string]$Distro = "runner",
+  [string]$PersistHome = "false"
 )
 
 $ErrorActionPreference = "Continue"
 if ($Password -eq "__BLANK__") { $Password = "" }
 if ($User -notmatch '^[A-Za-z0-9_-]{1,16}$') { $User = "giecko" }
 if ($Mask -in @("true", "1", "yes")) { $Mask = "1" } else { $Mask = "0" }
+if ($PersistHome -in @("true", "1", "yes")) { $PersistHome = "1" } else { $PersistHome = "0" }
+if ($PersistHome -eq "1") { Write-Host "  persistent home is linux/macos only, skipping on windows" }
 switch ($Stack) { "terminal" {} "vscode" {} "ide" {} "desktop" {} default { Write-Host "  unknown stack '$Stack', using ide"; $Stack = "ide" } }
 switch ($Distro) { "runner" {} default { Write-Host "no docker distros on Windows, using runner shell"; $Distro = "runner" } }
 [int]$DurationI = 0
@@ -610,10 +613,16 @@ GIECKO_RUN_ID='$RunId'
 GIECKO_REGION='$Region'
 GIECKO_STACK='$Stack'
 GIECKO_DISTRO='$DistroEff'
+GIECKO_WORK_BRANCH='$WorkBranch'
+GIECKO_END_EPOCH='$EndEpoch'
+GIECKO_AUTOSAVE_MIN='$AutosaveI'
+GIECKO_BOOT_SECS='$BootSecs'
+GIECKO_NAMED='$Named'
+GIECKO_PERSIST='$PersistHome'
 "@
-Set-Content -Path (Join-Path $env:USERPROFILE ".giecko.env") -Value $envContent
-
 $BootSecs = [int]((Get-Date) - $BootStart).TotalSeconds
+$EndEpoch = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $DurationI * 60 - $BootSecs
+Set-Content -Path (Join-Path $env:USERPROFILE ".giecko.env") -Value $envContent
 $DispTerm = Pub-Url $UrlTerm
 $DispCode = Pub-Url $UrlCode
 $DispDesk = Pub-Url $UrlDesk

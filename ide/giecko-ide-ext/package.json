@@ -1,0 +1,61 @@
+{
+  "name": "giecko-ide",
+  "displayName": "GIECKO IDE",
+  "description": "Giecko session control: save, status, rooms, URLs and QR codes without the terminal",
+  "version": "0.7.0",
+  "publisher": "giecko",
+  "license": "ISC",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "giecko.panel",
+        "title": "GIECKO: Open Session Panel"
+      },
+      {
+        "command": "giecko.save",
+        "title": "GIECKO: Save Workspace Now"
+      },
+      {
+        "command": "giecko.info",
+        "title": "GIECKO: Session Info"
+      },
+      {
+        "command": "giecko.urls",
+        "title": "GIECKO: Show Session URLs"
+      },
+      {
+        "command": "giecko.room",
+        "title": "GIECKO: Switch to Room (named tmux session)"
+      },
+      {
+        "command": "giecko.rooms",
+        "title": "GIECKO: List Rooms"
+      },
+      {
+        "command": "giecko.restore",
+        "title": "GIECKO: List Saved Runs for Restore"
+      }
+    ],
+    "configuration": {
+      "title": "GIECKO IDE",
+      "properties": {
+        "giecko.autosaveMinutes": {
+          "type": "number",
+          "default": 15,
+          "description": "Save the workspace every N minutes (0 = off)"
+        }
+      }
+    }
+  },
+  "icon": "icon.png"
+}

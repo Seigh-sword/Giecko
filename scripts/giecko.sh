@@ -11,6 +11,10 @@ USER="$(printf '%s' "${6:-giecko}" | tr -cd 'A-Za-z0-9_-' | head -c 16)"
 [ -n "$USER" ] || USER="giecko"
 case "${7:-false}" in true|1|yes) MASK=1;; *) MASK=0;; esac
 DISTRO="${8:-runner}"
+PERSIST_HOME=0; case "${9:-false}" in true|1|yes) PERSIST_HOME=1;; esac
+GIECKO_IDE_VER="${GIECKO_IDE_VER:-0.7.0}"
+GIECKO_OURS="Seigh-sword/Giecko"
+HOME_BRANCH="giecko-home"
 
 TERM_PORT=7681
 CODE_PORT=8080
@@ -39,6 +43,7 @@ RUNDIR="$PWD/.giecko"
 CODER_VER_FALLBACK="4.137.0"
 mkdir -p "$RUNDIR"
 
+case "$DURATION_MIN" in ''|*[!0-9]*) echo "  bad duration '$DURATION_MIN', using 180"; DURATION_MIN=180;; esac
 case "$STACK" in terminal|vscode|ide|desktop) ;; *) echo "  unknown stack '$STACK', using ide"; STACK="ide";; esac
 case "$DISTRO" in runner|ubuntu|debian|fedora|arch|alpine) ;; *) echo "  unknown distro '$DISTRO', using runner"; DISTRO="runner";; esac
 if [ "$DISTRO" != "runner" ]; then
@@ -268,6 +273,13 @@ dl_cloudflared() {
 dl_ttyd() {
   [ "$NEED_TTYD" = 1 ] || return 0
   command -v ttyd >/dev/null 2>&1 && return 0
+  TTYD_ARCH="x86_64"; [ "$ARCH" = "arm64" ] && TTYD_ARCH="aarch64"
+  [ "$OSNAME" = "Darwin" ] && TTYD_ARCH="darwin-$ARCH"
+  if fetch -o /tmp/giecko-ttyd "https://github.com/$GIECKO_OURS/releases/download/v0.7.0/giecko-terminal-$TTYD_ARCH" 2>/dev/null; then
+    chmod +x /tmp/giecko-ttyd && priv mv /tmp/giecko-ttyd "$BIN_DIR/ttyd"
+    echo " GIECKO Terminal installed (ours)"
+    return 0
+  fi
   if [ "$OSNAME" = "Darwin" ]; then
     echo " installing ttyd via brew..."
     brew install ttyd 2>/dev/null || return 1
@@ -279,23 +291,42 @@ dl_ttyd() {
     chmod +x /tmp/giecko-ttyd.exe && priv mv /tmp/giecko-ttyd.exe "$BIN_DIR/ttyd.exe"
     return 0
   fi
-  echo "downloading ttyd..."
+  echo "downloading ttyd (upstream)..."
   TTYD_ARCH="x86_64"; [ "$ARCH" = "arm64" ] && TTYD_ARCH="aarch64"
   fetch -o /tmp/giecko-ttyd "https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.$TTYD_ARCH" \
     || return 1
   chmod +x /tmp/giecko-ttyd && priv mv /tmp/giecko-ttyd "$BIN_DIR/ttyd"
 }
-dl_code() {
+dl_ide() {
   [ "$NEED_CODE" = 1 ] || return 0
   [ -n "${CODE_BIN:-}" ] && [ -x "$CODE_BIN" ] && return 0
-  echo " resolving code-server..."
-  local url="" auth=() ospat="linux" pat=""
+  local ospat="linux"
   [ "$OSNAME" = "Darwin" ] && ospat="macos"
-  [ "$IS_WINDOWS" = 1 ] && ospat="windows"
-  pat="$ospat-$ARCH"
+  if [ "$IS_WINDOWS" = 1 ]; then
+    echo "  GIECKO IDE is not built for windows yet, vscode unavailable"
+    return 1
+  fi
+  local ours="https://github.com/$GIECKO_OURS/releases/download/v$GIECKO_IDE_VER/giecko-ide-$GIECKO_IDE_VER-$ospat-$ARCH.tar.gz"
+  echo " resolving GIECKO IDE..."
+  if fetch -o /tmp/giecko-ide.tar.gz "$ours" 2>/dev/null; then
+    rm -rf /tmp/giecko-ide && mkdir -p /tmp/giecko-ide
+    if tar -xzf /tmp/giecko-ide.tar.gz -C /tmp/giecko-ide; then
+      local src
+      src="$(find /tmp/giecko-ide -maxdepth 2 -type d -name 'giecko-ide-*' | head -n 1)"
+      [ -n "$src" ] && CODE_BIN="$(find "$src" -maxdepth 3 -name code-server | head -n 1)"
+      if [ -n "$CODE_BIN" ]; then
+        chmod +x "$CODE_BIN" 2>/dev/null || true
+        echo " GIECKO IDE installed (ours, $GIECKO_IDE_VER)"
+        return 0
+      fi
+    fi
+    echo "  our IDE download failed, falling back to code-server"
+  fi
+  echo " resolving code-server (upstream fallback)..."
+  local url="" auth=() pat="$ospat-$ARCH"
   [ -n "${GITHUB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
   url=$(fetch -m 20 "${auth[@]}" https://api.github.com/repos/coder/code-server/releases/latest 2>/dev/null \
-    | grep -o "https://[^\"]*${pat}[^\"]*\\.tar\\.gz" | head -n 1 || true)
+    | grep -o "https://[^\"']*${pat}[^\"']*\\.tar\\.gz" | head -n 1 || true)
   if [ -z "$url" ]; then
     if [ "$OSNAME" = "Darwin" ]; then
       echo " trying code-server via brew..."
@@ -564,7 +595,7 @@ PYEOF
 }
 dl_cloudflared & P1=$!
 dl_ttyd & P2=$!
-dl_code & P3=$!
+dl_ide & P3=$!
 pip_trzsz & P4=$!
 wait $AP || echo "  system packages job had issues"
 wait $P1 || fail "cloudflared download failed"
@@ -586,6 +617,64 @@ if [ "$NEED_CODE" = 1 ] && [ "$CODE_DL_OK" = 1 ] && [ -z "$CODE_BIN" ]; then
   [ -n "$CODE_BIN" ] && [ -x "$CODE_BIN" ] || fail "code-server binary not found after extract"
   "$CODE_BIN" --version | head -n 1
 fi
+GIECKO_VSIX="$SCRIPT_DIR/../ide/dist/giecko-ide-$GIECKO_IDE_VER.vsix"
+seed_ide() {
+  local dir="$HOME/.local/share/code-server/User"
+  mkdir -p "$dir"
+  [ -f "$dir/settings.json" ] || cp "$SCRIPT_DIR/../ide/settings-default.json" "$dir/settings.json" 2>/dev/null || true
+  if [ -n "${CODE_BIN:-}" ] && [ -x "${CODE_BIN:-}" ] && [ -f "$GIECKO_VSIX" ]; then
+    "$CODE_BIN" --install-extension "$GIECKO_VSIX" >/dev/null 2>&1 || echo "  giecko IDE extension install skipped"
+  fi
+}
+if [ "$NEED_CODE" = 1 ] && [ "$CODE_DL_OK" = 1 ]; then seed_ide || true; fi
+restore_home() {
+  [ "$PERSIST_HOME" = 1 ] || return 0
+  [ "${GITHUB_ACTIONS:-}" = "true" ] || return 0
+  [ -n "${GITHUB_TOKEN:-}" ] && [ -n "$REPO_SLUG" ] || return 0
+  echo " persistent home: restoring..."
+  local rdir="$_GH_HOME_TMP"
+  rm -rf "$rdir" && mkdir -p "$rdir"
+  local auth="https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO_SLUG}.git"
+  if git clone -q --depth 1 --branch "$HOME_BRANCH" "$auth" "$rdir" 2>/dev/null; then
+    if [ -f "$rdir/home.tgz" ]; then
+      tar -xzf "$rdir/home.tgz" -C "$HOME" 2>/dev/null && echo "  home restored from $HOME_BRANCH" || echo "  home restore had issues"
+    else
+      echo "  no home snapshot file, starting fresh"
+    fi
+  else
+    echo "  no home snapshot found, starting fresh"
+  fi
+  rm -rf "$rdir"
+}
+persist_home() {
+  [ "$PERSIST_HOME" = 1 ] || return 0
+  [ "${GITHUB_ACTIONS:-}" = "true" ] || return 0
+  [ -n "${GITHUB_TOKEN:-}" ] && [ -n "$REPO_SLUG" ] || return 0
+  local rdir="$_GH_HOME_TMP"
+  rm -rf "$rdir" && mkdir -p "$rdir"
+  local auth="https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO_SLUG}.git"
+  git clone -q --depth 1 --branch "$HOME_BRANCH" "$auth" "$rdir" 2>/dev/null \
+    || (git clone -q --depth 1 "$auth" "$rdir" 2>/dev/null && cd "$rdir" && git checkout -q --orphan "$HOME_BRANCH" && git rm -q -rf . 2>/dev/null)
+  [ -d "$rdir/.git" ] || { echo "  home snapshot branch unavailable"; rm -rf "$rdir"; return 0; }
+  tar -czf "$rdir/home.tgz" -C "$HOME" \
+    .bashrc .profile .bash_profile .zshrc .gitconfig .tmux.conf .vim .ssh .config 2>/dev/null || true
+  [ -f "$rdir/home.tgz" ] || { echo "  nothing to snapshot for the persistent home"; rm -rf "$rdir"; return 0; }
+  local size
+  size=$(du -m "$rdir/home.tgz" | cut -f1)
+  [ "$size" -le 25 ] || { echo "  home snapshot too big (${size}MB), skipping"; rm -rf "$rdir"; return 0; }
+  (cd "$rdir" \
+    && rm -f home-*.tgz 2>/dev/null \
+    && git add home.tgz \
+    && git -c user.email="giecko@local" -c user.name="giecko" commit -qm "home snapshot run $RUN_ID" \
+    && git tag -f "home-run-$RUN_ID" \
+    && git push -q -f -u origin "$HOME_BRANCH" 2>/dev/null \
+    && git push -q -f origin "home-run-$RUN_ID" 2>/dev/null) \
+    && echo "  home snapshot saved (tag home-run-$RUN_ID)" \
+    || echo "  home snapshot push failed (non-fatal)"
+  rm -rf "$rdir"
+}
+_GH_HOME_TMP="$(mktemp -d)"
+restore_home || true
 echo "  binary checksums (sha256):"
 echo "    cloudflared: $(sha256_of "$(command -v cloudflared)")"
 if [ "$NEED_TTYD" = 1 ]; then echo "    ttyd: $(sha256_of "$(command -v ttyd)")"; fi
@@ -757,7 +846,7 @@ if [ "$NEED_TTYD" = 1 ]; then
   echo "  starting ttyd on :$TERM_PORT (cmd: ${SHELL_CMD[*]})..."
   rm -f "$RUNDIR"/ttyd.log "$RUNDIR"/ttyd.pid
   _TTYD_PWD="$PWD"; cd "$WORKDIR"
-  nohup ttyd "${TTYD_OPTS[@]}" "${SHELL_CMD[@]}" > "$RUNDIR/ttyd.log" 2>&1 &
+  GIECKO_RUN_ID="$RUN_ID" GIECKO_REGION="$REGION" GIECKO_STACK="$STACK" GIECKO_DISTRO="$DISTRO_EFF" GIECKO_USER="$USER" GIECKO_WORK_BRANCH="$WORK_BRANCH" GIECKO_AUTOSAVE_MIN="$AUTOSAVE_MIN" GIECKO_END_EPOCH="$(( $(date +%s) + DURATION_MIN * 60 - SECONDS ))" nohup ttyd "${TTYD_OPTS[@]}" "${SHELL_CMD[@]}" > "$RUNDIR/ttyd.log" 2>&1 &
   echo "$!" > "$RUNDIR/ttyd.pid"
   cd "$_TTYD_PWD"
   echo "⏳ waiting for ttyd..."
@@ -772,11 +861,12 @@ if [ "$NEED_CODE" = 1 ]; then
   rm -f "$RUNDIR"/code-server.log "$RUNDIR"/code.pid
   CODE_DIR="$WORKDIR"
   if [ "$IS_WINDOWS" = 1 ] && command -v cygpath >/dev/null 2>&1; then CODE_DIR="$(cygpath -m "$WORKDIR")"; fi
+  GIECKO_ENV=(GIECKO_RUN_ID="$RUN_ID" GIECKO_REGION="$REGION" GIECKO_STACK="$STACK" GIECKO_DISTRO="$DISTRO_EFF" GIECKO_USER="$USER" GIECKO_WORK_BRANCH="$WORK_BRANCH" GIECKO_AUTOSAVE_MIN="$AUTOSAVE_MIN" GIECKO_END_EPOCH="$(( $(date +%s) + DURATION_MIN * 60 - SECONDS ))" GIECKO_BOOT_SECS="$SECONDS")
   if [ -n "$PASSWORD" ]; then
-    PASSWORD="$PASSWORD" nohup "$CODE_BIN" --bind-addr "127.0.0.1:$CODE_PORT" \
+    env "${GIECKO_ENV[@]}" PASSWORD="$PASSWORD" nohup "$CODE_BIN" --bind-addr "127.0.0.1:$CODE_PORT" \
       --auth password --disable-telemetry "$CODE_DIR" > "$RUNDIR/code-server.log" 2>&1 &
   else
-    nohup "$CODE_BIN" --bind-addr "127.0.0.1:$CODE_PORT" \
+    env "${GIECKO_ENV[@]}" nohup "$CODE_BIN" --bind-addr "127.0.0.1:$CODE_PORT" \
       --auth none --disable-telemetry "$CODE_DIR" > "$RUNDIR/code-server.log" 2>&1 &
   fi
   echo "$!" > "$RUNDIR/code.pid"
@@ -947,6 +1037,8 @@ if [ "$DESK_OK" = 1 ]; then
     || { echo " desktop tunnel failed. Log:"; cat "$RUNDIR/desk-tunnel.log"; fail "desktop tunnel failed"; }
   URL_DESK="$URL_DESK/vnc.html?autoconnect=true&resize=scale"
 fi
+BOOT_SECS=$((SECONDS - BOOT_START))
+END_EPOCH=$(( $(date +%s) + DURATION_MIN * 60 - SECONDS ))
 {
   echo "GIECKO_URL_TERM='$URL_TERM'"
   echo "GIECKO_URL_CODE='$URL_CODE'"
@@ -956,9 +1048,14 @@ fi
   echo "GIECKO_REGION='$REGION'"
   echo "GIECKO_STACK='$STACK'"
   echo "GIECKO_DISTRO='$DISTRO_EFF'"
+  echo "GIECKO_WORK_BRANCH='$WORK_BRANCH'"
+  echo "GIECKO_END_EPOCH='$END_EPOCH'"
+  echo "GIECKO_AUTOSAVE_MIN='$AUTOSAVE_MIN'"
+  echo "GIECKO_BOOT_SECS='$BOOT_SECS'"
+  echo "GIECKO_NAMED='$NAMED'"
+  echo "GIECKO_PERSIST='$PERSIST_HOME'"
 } > /tmp/giecko.env && (priv mv /tmp/giecko.env "$ENV_FILE" || mv /tmp/giecko.env "$ENV_FILE") || true
 
-BOOT_SECS=$((SECONDS - BOOT_START))
 DISP_TERM=$(pub_url "$URL_TERM")
 DISP_CODE=$(pub_url "$URL_CODE")
 DISP_DESK=$(pub_url "$URL_DESK")
@@ -1072,6 +1169,9 @@ $(qr_block "$URL_TERM")
     && echo "::notice::giecko-comment posted" || echo "::warning::giecko-comment failed (non-fatal)" ) || true
 fi
 
+if [ "$PERSIST_HOME" = 1 ]; then
+  persist_home || true
+fi
 if [ "${AUTOSAVE_MIN:-0}" -gt 0 ] 2>/dev/null && command -v giecko >/dev/null 2>&1; then
   ( while true; do sleep $((AUTOSAVE_MIN * 60)); ( cd "$WORKDIR" && giecko save --quiet ) || true; done ) &
   echo "$!" > "$RUNDIR/autosave.pid"
@@ -1122,5 +1222,6 @@ else
   echo "⏰ time's up (${DURATION_MIN} min). Final backup..."
 fi
 command -v giecko >/dev/null 2>&1 && ( cd "$WORKDIR" && giecko save --quiet ) || true
+persist_home || true
 publish_report completed "$HEARTBEATS heartbeats" || true
 echo "Bye! "

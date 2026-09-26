@@ -162,11 +162,37 @@ What we did about it:
 | Shell | `bash` in `tmux`, 🦎 prompt, `ll` / `gs` / `save` aliases |
 | Languages | `gcc`, `python3`, `node` preinstalled; `apt install` anything live |
 | Tools | `git`, `tmux`, `htop`, `tree`, `jq`, `zip`, `sqlite3`, `fastfetch` |
-| `giecko` CLI | `giecko urls` · `giecko info` · **`giecko save`** (snapshot to `giecko-saves/run-<id>`) |
+| `giecko` CLI | `giecko urls` · `giecko info` · **`giecko save`** (snapshot to `giecko-saves/run-<id>`) · `giecko timeleft` · `giecko room NAME` · `giecko rooms` |
 | Autosave | workspace snapshotted every N min (default 15, `0` = off) + once at shutdown |
 | File transfer | `tsz file.zip` = download, `trz` = upload (drag-drop too), `sz`/`rz` fallback |
 | Mask mode | hostnames hidden in output (`https://****.trycloudflare.com`); QR in logs still connects |
 | QR codes | square half-block codes in logs + summary — scan with your phone 📱 |
+
+## 🦎 GIECKO IDE + GIECKO Terminal
+
+The VS Code in your session is **GIECKO IDE** — code-server remade: our
+gecko branding and icons everywhere, Copilot and chat stripped
+completely, Open VSX gallery, telemetry off, and 36 extensions bundled
+(10+ languages, themes, icon themes, utilities). The status bar shows
+run info + time left; the GIECKO panel (⌘/Ctrl+Shift+P → `GIECKO:
+open panel`) has session URLs, QR codes, save / rooms / timeleft
+buttons and opt-in autosave.
+
+The terminal is **GIECKO Terminal** — ttyd remade with the same
+treatment: GIECKO UI, gecko favicon, xterm that fits any screen
+(phones included).
+
+Sessions install both from this repo's releases first; upstream
+code-server/ttyd stay as fallbacks. Build them yourself:
+
+```bash
+./scripts/build-terminal.sh   # → ide/dist/giecko-terminal-<arch>
+bash ide/build-ide.sh         # → ide/dist/giecko-ide-<version>-<target>.tar.gz
+```
+
+**Persistent home** (opt in): tick `persist_home` when launching and
+your dotfiles + config are snapshotted to the `giecko-home` branch and
+restored on your next run.
 
 ## 🖥️ Try it locally (no Actions needed)
 
@@ -232,6 +258,13 @@ masked), plus a status comment on the commit. Control via commit message:
 - [x] Browser reconnect after a tab crash (tmux keeps the session)
 - [x] Desktop favicon: lizard + repo avatar (noVNC)
 - [x] ISC license
+- [x] GIECKO IDE: code-server remade (gecko branding, no Copilot, 36 extensions)
+- [x] GIECKO Terminal: ttyd remade (GIECKO UI, mobile friendly)
+- [x] GIECKO IDE extension: panel, status bar countdown, in-IDE save/rooms
+- [x] Named rooms: `giecko room NAME` + `giecko rooms`
+- [x] `giecko timeleft` + end-time in the IDE status bar
+- [x] Opt-in persistent home (`persist_home` → `giecko-home` branch)
+- [x] Release automation: ide workflow builds + attaches terminal/IDE bundles; npm publish workflow (manual)
 - [ ] Full plan: [ROADMAP.md](ROADMAP.md)
 
 ## 🧩 How it works

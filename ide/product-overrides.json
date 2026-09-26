@@ -1,0 +1,19 @@
+{
+  "nameShort": "GIECKO IDE",
+  "nameLong": "GIECKO IDE",
+  "applicationName": "giecko-ide",
+  "dataFolderName": ".giecko-ide",
+  "win32MutexName": "gieckoide",
+  "licenseName": "ISC",
+  "extensionsGallery": {
+    "serviceUrl": "https://open-vsx.org/vscode/gallery",
+    "itemUrl": "https://open-vsx.org/vscode/item",
+    "resourceUrlTemplate": "https://open-vsx.org/vscode/unresolved/{publisher}/{name}/{version}/{path}",
+    "controlUrl": "",
+    "recommendationUrl": ""
+  },
+  "extensionEnabledApiProposals": {},
+  "telemetry": {
+    "telemetryLevel": "off"
+  }
+}

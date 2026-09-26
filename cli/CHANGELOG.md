@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.7.0
+
+- New: GIECKO IDE, our remade code-server. Rebranded end to end with
+  the gecko icons, Copilot and chat stripped completely, Open VSX
+  gallery, telemetry off, and 36 extensions bundled (10+ languages,
+  themes, icon themes, utilities and tooling). Builds for
+  linux-x86_64, linux-aarch64, darwin-x86_64 and darwin-aarch64 via
+  ide/build-ide.sh, attached to releases by the ide workflow
+- New: GIECKO Terminal, our remade ttyd 1.7.7 with the GIECKO UI,
+  inline favicon, xterm + FitAddon and mobile friendly layout.
+  Sessions install it from our releases first
+- New: the GIECKO IDE extension (status bar countdown, control panel
+  with session URLs and QR codes, giecko save / rooms / timeleft
+  buttons, opt-in autosave)
+- New: giecko timeleft, giecko room NAME, giecko rooms and
+  giecko persist commands
+- New: opt-in persistent home (workflow input persist_home): your
+  dotfiles and config are snapshotted to the giecko-home branch and
+  restored on your next run
+- New: GIECKO_* environment exported to the IDE and terminal with
+  session info, URLs, autosave and end time; the IDE extension also
+  reads it from the env file
+
 ## 0.6.0
 
 - New: tiny-giecko, a native client in portable C99 with no runtime

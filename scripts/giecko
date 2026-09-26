@@ -32,6 +32,10 @@ cmd_help() {
     giecko info          run id, region, stack, workspace
     giecko urls          the browser URLs for this session
     giecko save          snapshot the workspace to branch giecko-saves/run-<id>
+    giecko timeleft      minutes left before the runner stops
+    giecko room [name]   switch to a named room (persistent tmux session)
+    giecko rooms         list the rooms on this runner
+    giecko persist       show how to opt in to a persistent home directory
 
   File transfer (in the session terminal):
     tsz <file>           download a file to your browser (progress bar!)
@@ -202,10 +206,54 @@ cmd_up() {
   fi
 }
 
+cmd_timeleft() {
+  if [ -z "${GIECKO_END_EPOCH:-}" ]; then echo "  unknown (no end time recorded)"; return 0; fi
+  local now left
+  now=$(date +%s)
+  left=$(( GIECKO_END_EPOCH - now ))
+  if [ "$left" -le 0 ]; then echo "  time is up - final backup soon"; else echo "  $(( left / 60 )) minutes left"; fi
+}
+
+cmd_room() {
+  local name="${1:-}"
+  if ! has tmux; then echo "  tmux not installed, rooms unavailable"; return 1; fi
+  if [ -z "$name" ]; then
+    name="$(basename "$(tmux display-message -p '#S' 2>/dev/null || echo giecko)")"
+    echo "  current room: $name"
+    return 0
+  fi
+  case "$name" in *[!A-Za-z0-9_-]*) echo "  room name: letters, numbers, - and _ only"; return 1;; esac
+  if [ -n "${TMUX:-}" ]; then
+    tmux new -A -s "$name" -c "$PWD" && tmux switch-client -t "$name"
+  else
+    tmux new -A -s "$name" -c "$PWD"
+  fi
+}
+
+cmd_rooms() {
+  if ! has tmux; then echo "  tmux not installed, rooms unavailable"; return 1; fi
+  local cur
+  cur="$(basename "$(tmux display-message -p '#S' 2>/dev/null || echo '')")"
+  tmux ls 2>/dev/null | while read -r line; do
+    local s="${line%%:*}"
+    if [ "$s" = "$cur" ]; then echo " * $line"; else echo "   $line"; fi
+  done || echo "  no rooms yet - create one: giecko room project-x"
+}
+
+cmd_persist() {
+  echo "  a persistent home keeps your dotfiles between sessions"
+  echo "  opt in when launching: workflow input persist_home = true"
+  echo "  inside the session your home is snapshotted to branch giecko-home"
+}
+
 case "$CMD" in
   info) cmd_info ;;
   urls) cmd_urls ;;
   save) cmd_save ;;
+  timeleft) cmd_timeleft ;;
+  room) cmd_room "$@" ;;
+  rooms) cmd_rooms ;;
+  persist) cmd_persist ;;
   up) cmd_up "$@" ;;
   ls) cmd_ls "$@" ;;
   watch) cmd_watch "$@" ;;
