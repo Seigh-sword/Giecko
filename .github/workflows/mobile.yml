@@ -46,7 +46,7 @@ jobs:
           if [ "${GITHUB_REF#refs/tags/}" != "$GITHUB_REF" ]; then
             TAG="$GITHUB_REF_NAME"
           else
-            TAG="$(gh release list --limit 1 --exclude-drafts --exclude-prereleases --json tagName --jq '.[0].tagName')"
+            TAG="$(gh release list --limit 1 --exclude-drafts --exclude-pre-releases --json tagName --jq '.[0].tagName')"
           fi
           [ -n "$TAG" ] || { echo "no release to attach to"; exit 1; }
           cp mobile/android/app/build/outputs/apk/release/app-release.apk "giecko-${TAG}-android.apk" || cp mobile/android/app/build/outputs/apk/release/*.apk "giecko-${TAG}-android.apk"
