@@ -608,6 +608,11 @@ cloudflared --version
 [ "$NEED_TTYD" = 1 ] && ttyd --version
 
 CODE_BIN="${CODE_BIN:-}"
+if [ "$NEED_CODE" = 1 ] && [ "$CODE_DL_OK" = 1 ] && [ -z "$CODE_BIN" ] && [ -d /tmp/giecko-ide ]; then
+  _idesrc="$(find /tmp/giecko-ide -maxdepth 2 -type d -name 'giecko-ide-*' | head -n 1)"
+  [ -n "$_idesrc" ] && CODE_BIN="$(find "$_idesrc" -maxdepth 3 -name code-server | head -n 1)"
+  [ -n "$CODE_BIN" ] && chmod +x "$CODE_BIN" 2>/dev/null
+fi
 if [ "$NEED_CODE" = 1 ] && [ "$CODE_DL_OK" = 1 ] && [ -z "$CODE_BIN" ]; then
   echo " extracting code-server..."
   rm -rf /tmp/code-server-*
