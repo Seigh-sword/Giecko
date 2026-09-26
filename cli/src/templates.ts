@@ -17,6 +17,7 @@ export function files(): Array<{ repoPath: string; bundle: string }> {
   return [
     { repoPath: ".github/workflows/giecko.yml", bundle: "giecko.yml" },
     { repoPath: "scripts/giecko.sh", bundle: "giecko.sh" },
+    { repoPath: "scripts/giecko.ps1", bundle: "giecko.ps1" },
     { repoPath: "scripts/giecko", bundle: "giecko" },
   ];
 }

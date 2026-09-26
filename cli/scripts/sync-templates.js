@@ -6,6 +6,7 @@ const out = path.join(__dirname, "..");
 const pairs = [
   [".github/workflows/giecko.yml", "templates/giecko.yml"],
   ["scripts/giecko.sh", "templates/giecko.sh"],
+  ["scripts/giecko.ps1", "templates/giecko.ps1"],
   ["scripts/giecko", "templates/giecko"],
   ["TERMS.md", "terms.txt"],
 ];

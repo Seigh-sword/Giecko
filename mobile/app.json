@@ -2,16 +2,22 @@
   "expo": {
     "name": "Giecko",
     "slug": "giecko",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
     "splash": {
-      "backgroundColor": "#0b0e14",
+      "image": "./assets/icon.png",
+      "backgroundColor": "#070b12",
       "resizeMode": "contain"
     },
     "android": {
       "package": "io.github.seighsword.giecko",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#070b12"
+      }
     },
     "ios": {
       "bundleIdentifier": "io.github.seighsword.giecko"
