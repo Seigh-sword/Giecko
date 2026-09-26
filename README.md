@@ -264,7 +264,7 @@ masked), plus a status comment on the commit. Control via commit message:
 - [x] Named rooms: `giecko room NAME` + `giecko rooms`
 - [x] `giecko timeleft` + end-time in the IDE status bar
 - [x] Opt-in persistent home (`persist_home` → `giecko-home` branch)
-- [x] Release automation: ide workflow builds + attaches terminal/IDE bundles; npm publish workflow (manual)
+- [x] Release automation: ide workflow builds + attaches terminal/IDE bundles (npm stays manual)
 - [ ] Full plan: [ROADMAP.md](ROADMAP.md)
 
 ## 🧩 How it works
