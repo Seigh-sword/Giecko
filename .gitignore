@@ -1,3 +1,5 @@
 node_modules/
 .giecko/
 giecko-terminal/build/
+ide/dist/giecko-terminal-*
+ide/dist/giecko-ide-*.tar.gz
