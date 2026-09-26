@@ -10,6 +10,9 @@ a real Linux **terminal**, **VS Code**, or a **full desktop**. That's it.
 That's the crazy idea.
 And it works.
 
+Full documentation lives in the [wiki](wiki/Home.md) — guides,
+references and deep dives, icon-styled and emoji-free.
+
 ```
  You (browser) ──https──▶ *.trycloudflare.com ──tunnel──▶ cloudflared ─┬─▶ ttyd ──▶ bash (tmux, host or docker distro)
                                 ▲                                      └─▶ code-server ──▶ VS Code
