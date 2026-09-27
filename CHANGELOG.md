@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.7.0
+
+- New: the session runs as the username you pick. A real OS account is
+  created on the runner, and the shell, tmux and the IDE terminals run
+  as that user: whoami, prompts, file ownership and giecko save commits
+  all carry your name. The workspace is shared with the runner through
+  a group so background autosave keeps working, and distro containers
+  create a matching user. Names that cannot become an account fall
+  back gracefully and the prompt still shows the chosen name
+- Fixed: the vscode stack died right after boot when a session user
+  was active. code-server inherited the runner's XDG_CONFIG_HOME
+  through sudo and crashed on a permission error; the session
+  environment now pins HOME and the XDG directories to the session
+  user
+- New: the web terminal keys bar was rebuilt. A second scrollable row
+  of symbol keys (| / \ ~ and friends), Del and a one-tap Ctrl+C
+  button, and sticky Ctrl and Alt toggles that apply to the next key
+  you press - from the bar, the symbol row or your on-screen keyboard
+  (Ctrl+arrows and Alt+letter included)
+- Fixed: the terminal's last line (the green tmux bar) overlapped the
+  keys bar on phones. The terminal now refits on every size change -
+  keys bar toggled, keyboard opened, window resized - so the tmux bar
+  always stays visible above the keys
+- Fixed: the work branch boot lines printed literal escape sequences
+  instead of glyphs
+
 ## 0.6.0
 
 - New: tiny-giecko, a native client in portable C99 with no runtime

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -123,24 +123,29 @@ html, body {
 #gg-keys {
   display: none;
   flex: 0 0 auto;
-  gap: 6px;
-  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-  overflow-x: auto;
+  flex-direction: column;
   background: var(--gg-bar);
   border-top: 1px solid var(--gg-line);
+}
+#gg-keys.show { display: flex; }
+.gg-keys-row {
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px 0;
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
-#gg-keys::-webkit-scrollbar { display: none; }
-#gg-keys.show { display: flex; }
+.gg-keys-row:last-child { padding-bottom: 6px; }
+.gg-keys-row::-webkit-scrollbar { display: none; }
 .gg-key {
   background: var(--gg-card);
   color: var(--gg-text);
   border: 1px solid var(--gg-line);
   border-radius: 10px;
-  min-width: 44px;
-  height: 44px;
-  padding: 0 12px;
+  min-width: 40px;
+  height: 42px;
+  padding: 0 11px;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -152,14 +157,6 @@ html, body {
 }
 .gg-key:active { background: #22355a; }
 .gg-key.on { border-color: var(--gg-green); color: var(--gg-green); background: #3ddc8422; }
-#gg-ctrl-pad {
-  display: none;
-  gap: 6px;
-  padding: 6px 8px;
-  background: var(--gg-bar);
-  border-top: 1px solid var(--gg-line);
-}
-#gg-ctrl-pad.show { display: flex; }
 #gg-overlay {
   position: fixed;
   inset: 0;
@@ -192,9 +189,6 @@ html, body {
   padding: 10px 22px;
   cursor: pointer;
 }
-@media (pointer: coarse) {
-  #gg-keys { display: flex; }
-}
 </style>
 </head>
 <body>
@@ -212,21 +206,57 @@ html, body {
     <button class="gg-btn" id="gg-full" title="fullscreen">[ ]</button>
   </div>
   <div id="gg-term-wrap"><div id="gg-term"></div></div>
-  <div id="gg-ctrl-pad"></div>
   <div id="gg-keys">
-    <div class="gg-key" data-code="esc">Esc</div>
-    <div class="gg-key" data-code="tab">Tab</div>
-    <div class="gg-key" data-ctrl="1">Ctrl</div>
-    <div class="gg-key" data-code="up">Up</div>
-    <div class="gg-key" data-code="down">Dn</div>
-    <div class="gg-key" data-code="left">Left</div>
-    <div class="gg-key" data-code="right">Right</div>
-    <div class="gg-key" data-code="home">Home</div>
-    <div class="gg-key" data-code="end">End</div>
-    <div class="gg-key" data-code="pgup">PgUp</div>
-    <div class="gg-key" data-code="pgdn">PgDn</div>
-    <div class="gg-key" data-paste="1">Paste</div>
-    <div class="gg-key" data-keyboard="1">Keyboard</div>
+    <div class="gg-keys-row">
+      <div class="gg-key" data-code="esc">Esc</div>
+      <div class="gg-key" data-code="ctrlc">^C</div>
+      <div class="gg-key" data-mod="ctrl">Ctrl</div>
+      <div class="gg-key" data-mod="alt">Alt</div>
+      <div class="gg-key" data-code="tab">Tab</div>
+      <div class="gg-key" data-code="up">↑</div>
+      <div class="gg-key" data-code="down">↓</div>
+      <div class="gg-key" data-code="left">←</div>
+      <div class="gg-key" data-code="right">→</div>
+      <div class="gg-key" data-code="home">Home</div>
+      <div class="gg-key" data-code="end">End</div>
+      <div class="gg-key" data-code="pgup">PgUp</div>
+      <div class="gg-key" data-code="pgdn">PgDn</div>
+      <div class="gg-key" data-code="del">Del</div>
+      <div class="gg-key" data-paste="1">Paste</div>
+      <div class="gg-key" data-keyboard="1">Keyboard</div>
+    </div>
+    <div class="gg-keys-row gg-syms">
+      <div class="gg-key" data-sym="|">|</div>
+      <div class="gg-key" data-sym="/">/</div>
+      <div class="gg-key" data-sym="\">\</div>
+      <div class="gg-key" data-sym="~">~</div>
+      <div class="gg-key" data-sym="`">`</div>
+      <div class="gg-key" data-sym="^">^</div>
+      <div class="gg-key" data-sym="&lt;">&lt;</div>
+      <div class="gg-key" data-sym="&gt;">&gt;</div>
+      <div class="gg-key" data-sym="[">[</div>
+      <div class="gg-key" data-sym="]">]</div>
+      <div class="gg-key" data-sym="{">{</div>
+      <div class="gg-key" data-sym="}">}</div>
+      <div class="gg-key" data-sym="(">(</div>
+      <div class="gg-key" data-sym=")">)</div>
+      <div class="gg-key" data-sym="=">=</div>
+      <div class="gg-key" data-sym="+">+</div>
+      <div class="gg-key" data-sym="-">-</div>
+      <div class="gg-key" data-sym="_">_</div>
+      <div class="gg-key" data-sym=":">:</div>
+      <div class="gg-key" data-sym=";">;</div>
+      <div class="gg-key" data-sym="&quot;">&quot;</div>
+      <div class="gg-key" data-sym="'">'</div>
+      <div class="gg-key" data-sym="*">*</div>
+      <div class="gg-key" data-sym="&amp;">&amp;</div>
+      <div class="gg-key" data-sym="#">#</div>
+      <div class="gg-key" data-sym="%">%</div>
+      <div class="gg-key" data-sym="$">$</div>
+      <div class="gg-key" data-sym="@">@</div>
+      <div class="gg-key" data-sym="!">!</div>
+      <div class="gg-key" data-sym="?">?</div>
+    </div>
   </div>
 </div>
 <div id="gg-overlay">
@@ -284,8 +314,10 @@ __ADDON_CLIPBOARD__
   var titleEl = document.getElementById('gg-title');
   var overlay = document.getElementById('gg-overlay');
   var overlayText = document.getElementById('gg-overlay-text');
-  var ctrlPad = document.getElementById('gg-ctrl-pad');
   var keysBar = document.getElementById('gg-keys');
+  try {
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) keysBar.classList.add('show');
+  } catch (e) {}
   var socket = null;
   var authenticated = false;
   var backoff = 1000;
@@ -386,7 +418,38 @@ __ADDON_CLIPBOARD__
     connect();
   });
 
+  var stickyCtrl = false;
+  var stickyAlt = false;
+
+  function updateMods() {
+    var c = keysBar.querySelector('.gg-key[data-mod="ctrl"]');
+    var a = keysBar.querySelector('.gg-key[data-mod="alt"]');
+    if (c) c.classList.toggle('on', stickyCtrl);
+    if (a) a.classList.toggle('on', stickyAlt);
+  }
+
   term.onData(function (d) {
+    if (stickyCtrl || stickyAlt) {
+      var out = d;
+      if (stickyCtrl) {
+        if (d.length === 1) {
+          if (d === ' ') {
+            out = '\x00';
+          } else {
+            var c = d.toUpperCase().charCodeAt(0);
+            if (c >= 64 && c <= 95) out = String.fromCharCode(c & 31);
+          }
+        } else if (d.length > 1 && d.charAt(0) === '\x1b') {
+          out = d.replace(/\[([A-DHF])/, '[1;5$1');
+        }
+      }
+      if (stickyAlt && out.charAt(0) !== '\x1b') out = '\x1b' + out;
+      stickyCtrl = false;
+      stickyAlt = false;
+      updateMods();
+      send(out);
+      return;
+    }
     send(d);
   });
 
@@ -397,6 +460,23 @@ __ADDON_CLIPBOARD__
   window.addEventListener('resize', function () {
     try { fit.fit(); sendResize(); } catch (e) {}
   });
+
+  function refit() {
+    try { fit.fit(); sendResize(); } catch (e) {}
+  }
+
+  if (window.ResizeObserver) {
+    var rafPending = false;
+    var ro = new ResizeObserver(function () {
+      if (rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(function () {
+        rafPending = false;
+        refit();
+      });
+    });
+    ro.observe(document.getElementById('gg-term-wrap'));
+  }
 
   document.getElementById('gg-font-plus').addEventListener('click', function () {
     fontSize = Math.min(28, fontSize + 1);
@@ -422,6 +502,7 @@ __ADDON_CLIPBOARD__
 
   document.getElementById('gg-toggle-keys').addEventListener('click', function () {
     keysBar.classList.toggle('show');
+    refit();
   });
 
   document.getElementById('gg-reconnect').addEventListener('click', function () {
@@ -430,32 +511,12 @@ __ADDON_CLIPBOARD__
     connect();
   });
 
-  var ctrlMap = { c: '\x03', d: '\x04', l: '\x0c', u: '\x15', w: '\x17', z: '\x1a', a: '\x01', e: '\x05', k: '\x0b', r: '\x12', n: '\x0e', p: '\x10', x: '\x18', b: '\x02', f: '\x06', y: '\x19' };
-
-  function showCtrlPad() {
-    ctrlPad.innerHTML = '';
-    var close = document.createElement('div');
-    close.className = 'gg-key';
-    close.textContent = 'x';
-    close.addEventListener('click', function () { ctrlPad.classList.remove('show'); });
-    ctrlPad.appendChild(close);
-    Object.keys(ctrlMap).forEach(function (k) {
-      var b = document.createElement('div');
-      b.className = 'gg-key';
-      b.textContent = 'Ctrl+' + k.toUpperCase();
-      b.addEventListener('click', function () {
-        send(ctrlMap[k]);
-        ctrlPad.classList.remove('show');
-      });
-      ctrlPad.appendChild(b);
-    });
-    ctrlPad.classList.add('show');
-  }
-
   keysBar.addEventListener('click', function (ev) {
     var el = ev.target.closest ? ev.target.closest('.gg-key') : null;
     if (!el) return;
-    if (el.getAttribute('data-ctrl')) { showCtrlPad(); return; }
+    var mod = el.getAttribute('data-mod');
+    if (mod === 'ctrl') { stickyCtrl = !stickyCtrl; updateMods(); return; }
+    if (mod === 'alt') { stickyAlt = !stickyAlt; updateMods(); return; }
     if (el.getAttribute('data-keyboard')) { term.focus(); return; }
     if (el.getAttribute('data-paste')) {
       if (navigator.clipboard && navigator.clipboard.readText) {
@@ -463,12 +524,36 @@ __ADDON_CLIPBOARD__
       }
       return;
     }
+    var sym = el.getAttribute('data-sym');
+    if (sym) {
+      var out = sym;
+      if (stickyCtrl) {
+        var c = sym.toUpperCase().charCodeAt(0);
+        if (c >= 64 && c <= 95) out = String.fromCharCode(c & 31);
+      }
+      if (stickyAlt) out = '\x1b' + out;
+      if (stickyCtrl || stickyAlt) { stickyCtrl = false; stickyAlt = false; updateMods(); }
+      send(out);
+      return;
+    }
     var code = el.getAttribute('data-code');
     var seqs = {
-      esc: '\x1b', tab: '\t', up: '\x1b[A', down: '\x1b[B', left: '\x1b[D', right: '\x1b[C',
-      home: '\x1b[H', end: '\x1b[F', pgup: '\x1b[5~', pgdn: '\x1b[6~'
+      esc: '\x1b', tab: '\t', ctrlc: '\x03',
+      up: '\x1b[A', down: '\x1b[B', left: '\x1b[D', right: '\x1b[C',
+      home: '\x1b[H', end: '\x1b[F', pgup: '\x1b[5~', pgdn: '\x1b[6~', del: '\x1b[3~'
     };
-    if (code && seqs[code]) send(seqs[code]);
+    if (code && seqs[code]) {
+      var seq = seqs[code];
+      if (stickyCtrl) {
+        var m = { up: '\x1b[1;5A', down: '\x1b[1;5B', left: '\x1b[1;5D', right: '\x1b[1;5C', home: '\x1b[1;5H', end: '\x1b[1;5F' };
+        if (m[code]) seq = m[code];
+      }
+      if (stickyAlt) seq = '\x1b' + seq;
+      stickyCtrl = false;
+      stickyAlt = false;
+      updateMods();
+      send(seq);
+    }
   });
 
   term.focus();
