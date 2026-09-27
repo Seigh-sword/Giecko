@@ -6,6 +6,13 @@
 > The `giecko` CLI that lives inside every session — everything the UI
 > can do, from the shell.
 
+The shell, tmux and the IDE terminals run as a real OS account named
+after your `user` input — `whoami`, the prompt, file ownership and
+`giecko save` commits all carry that name. If the name cannot become
+an account (a system name, a windows runner), the boot log says so,
+the session falls back to the runner account, and the prompt still
+shows your chosen name.
+
 ## The commands
 
 | Command | What it does |

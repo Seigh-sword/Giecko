@@ -30,6 +30,15 @@
 | your laptop | nothing (web) — or the CLI's config and tokens (npm way) |
 | Cloudflare | an encrypted tunnel, no content inspection |
 
+The session runs as a dedicated OS account named after your `user`
+input, not as the runner service account. The workspace is shared
+with the runner through a common group so background autosave and
+in-session saves both work. Names that already exist as system
+accounts (`root`, `daemon`, …) are refused. On GitHub runners the
+session account inherits the runner's passwordless sudo — treat it
+as exactly what it is: a disposable root-capable box that dies at
+the duration limit.
+
 The session uses the repository's `GITHUB_TOKEN` for saves (contents:
 write on that repo only). It cannot touch your other repositories,
 account settings, or secrets beyond the workflow's own scope.

@@ -12,7 +12,7 @@
 | `stack` | `ide` `terminal` `vscode` `desktop` | `ide` | what runs (see [Stacks](Stacks.md)) |
 | `os` | `ubuntu-latest` `macos-latest` `windows-latest` | `ubuntu-latest` | runner OS (see [Distros](Distros.md)) |
 | `distro` | `runner` `ubuntu` `debian` `fedora` `arch` `alpine` | `runner` | shell environment (linux only) |
-| `user` | text, `[A-Za-z0-9_-]{1,16}` | `giecko` | login username |
+| `user` | text, `[A-Za-z0-9_-]{1,16}` | `giecko` | login username **and** the OS account the session runs as |
 | `password` | text | `giecko` | login password — **blank = no auth** |
 | `mask` | boolean | `false` | hide tunnel hostnames in output |
 | `duration_minutes` | number, max 360 | `180` | how long the runner lives |

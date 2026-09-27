@@ -13,6 +13,7 @@
 | page asks for password, rejects it | password > 8 chars on **external** VNC clients (macOS desktop) | use the **first 8 characters** in the VNC client; full password in the browser |
 | IDE never comes up, terminal fine | IDE stack on a windows runner (IDE not bundled there yet) | use `stack=terminal` on windows, or an ubuntu/macos runner |
 | boot takes minutes | far region + distro image pull | check the `region:` line; try `distro=runner` |
+| `whoami` shows the runner account, not my username | the name could not become an OS account (system name, windows runner, no root) | check the `session user:` line in the boot log; pick a plain lowercase name — the prompt still shows your chosen name either way |
 | `GIECKO IS LIVE` but the URL 404s | tunnel still warming (rare) | wait ~30s, refresh; check the run summary for updated URLs |
 
 ## During the session

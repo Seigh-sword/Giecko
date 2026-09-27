@@ -19,6 +19,12 @@ On the runner while it lives, in `giecko-work/run-<id>` branches when
 you save, and wherever you push it. The runner disk is wiped at the
 end — see [Persistence](Persistence.md).
 
+**Why does my session say `runner`?**
+It should not — the shell and IDE terminals run as the OS account
+named by your `user` input. If that name cannot become an account
+(a system name, a windows runner), the boot log explains the
+fallback and the prompt still shows your chosen name.
+
 **Why is typing slow?**
 The speed of light. Your keys travel to a Cloudflare edge and a runner
 region and back. The runner region is printed at boot; the IDE buffers
