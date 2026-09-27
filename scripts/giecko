@@ -69,7 +69,7 @@ cmd_save() {
   br="$(git -C "$repo" branch --show-current 2>/dev/null || echo "")"
   [ -n "$br" ] || { say " detached HEAD, nothing to save"; exit 1; }
   git -C "$repo" config user.email >/dev/null 2>&1 || git -C "$repo" config user.email "giecko@local"
-  git -C "$repo" config user.name >/dev/null 2>&1 || git -C "$repo" config user.name "giecko"
+  git -C "$repo" config user.name >/dev/null 2>&1 || git -C "$repo" config user.name "${GIECKO_USER:-giecko}"
   git -C "$repo" add -A
   if git -C "$repo" diff --cached --quiet; then say " nothing new to save"; return 0; fi
   git -C "$repo" commit -qm " giecko save $(date -u '+%Y-%m-%d %H:%M UTC')" || { say " commit failed"; exit 1; }

@@ -351,6 +351,12 @@ pip_trzsz() {
   (command -v trz >/dev/null 2>&1 && command -v tsz >/dev/null 2>&1) && return 0
   command -v python3 >/dev/null 2>&1 || return 0
   echo " installing trzsz (fast file transfer)..."
+  if [ "$CAN_ROOT" = 1 ]; then
+    priv python3 -m pip install -q --break-system-packages trzsz 2>/dev/null \
+      || priv python3 -m pip install -q trzsz 2>/dev/null \
+      || true
+  fi
+  command -v trz >/dev/null 2>&1 && command -v tsz >/dev/null 2>&1 && return 0
   python3 -m pip install -q --user --break-system-packages trzsz 2>/dev/null \
     || echo "  trzsz install failed, ZMODEM (sz/rz) still available"
 }
@@ -613,6 +619,59 @@ if [ "$STACK" = "desktop" ] && [ "$OSNAME" = "Linux" ]; then command -v Xvfb >/d
 cloudflared --version
 [ "$NEED_TTYD" = 1 ] && ttyd --version
 
+SESS_USER_OK=0
+SESS_USER="$USER"
+SESS_HOME="$HOME"
+if command -v sudo >/dev/null 2>&1; then
+  as_user() { sudo -u "$1" -H env "${@:2}"; }
+else
+  as_user() { false; }
+fi
+run_as_sess() { if [ "$SESS_USER_OK" = 1 ]; then as_user "$USER" "$@"; else "$@"; fi; }
+ensure_session_user() {
+  [ "$IS_WINDOWS" = 0 ] || return 0
+  [ "$CAN_ROOT" = 1 ] || { echo "  no root here, session shell runs as $(id -un)"; return 0; }
+  command -v sudo >/dev/null 2>&1 || return 0
+  case "$USER" in ""|-*|*[!A-Za-z0-9_-]*)
+    echo "  username '$USER' cannot become an OS account, session runs as $(id -un)"
+    return 0;;
+  esac
+  local uid
+  if [ "$OSNAME" = "Darwin" ]; then
+    if uid="$(id -u "$USER" 2>/dev/null)" && [ "$uid" -ge 500 ]; then
+      SESS_USER_OK=1
+    elif priv sysadminctl -addUser "$USER" -password "${PASSWORD:-$(python3 -c 'import secrets; print(secrets.token_urlsafe(12))' 2>/dev/null || echo "giecko-$(date +%s)")}" >/dev/null 2>&1; then
+      SESS_USER_OK=1
+    else
+      echo "  could not create the macOS account '$USER', session runs as $(id -un)"
+      return 0
+    fi
+    SESS_HOME="$(dscl . -read "/Users/$USER" NFSHomeDirectory 2>/dev/null | awk '{print $2}')"
+  elif [ "$OSNAME" = "Linux" ]; then
+    if uid="$(id -u "$USER" 2>/dev/null)"; then
+      if [ "$uid" -lt 1000 ]; then
+        echo "  '$USER' is a system account, session runs as $(id -un)"
+        return 0
+      fi
+      SESS_USER_OK=1
+    elif priv useradd -m -s /bin/bash "$USER" 2>>"$RUNDIR/useradd.log"; then
+      SESS_USER_OK=1
+    else
+      echo "  could not create OS user '$USER', session runs as $(id -un)"
+      [ -s "$RUNDIR/useradd.log" ] && tail -n 1 "$RUNDIR/useradd.log" 2>/dev/null || true
+      return 0
+    fi
+    priv usermod -aG "$(id -gn)" "$USER" 2>/dev/null || true
+    if getent group docker >/dev/null 2>&1; then priv usermod -aG docker "$USER" 2>/dev/null || true; fi
+    SESS_HOME="$(getent passwd "$USER" | cut -d: -f6)"
+  else
+    return 0
+  fi
+  [ -n "$SESS_HOME" ] && [ -d "$SESS_HOME" ] || SESS_HOME="/home/$USER"
+  echo " session user: $USER (uid $(id -u "$USER"), home $SESS_HOME)"
+}
+ensure_session_user || true
+
 CODE_BIN="${CODE_BIN:-}"
 if [ "$NEED_CODE" = 1 ] && [ "$CODE_DL_OK" = 1 ] && [ -z "$CODE_BIN" ] && [ -d /tmp/giecko-ide ]; then
   _idesrc="$(find /tmp/giecko-ide -maxdepth 2 -type d -name 'giecko-ide-*' | head -n 1)"
@@ -630,11 +689,11 @@ if [ "$NEED_CODE" = 1 ] && [ "$CODE_DL_OK" = 1 ] && [ -z "$CODE_BIN" ]; then
 fi
 GIECKO_VSIX="$SCRIPT_DIR/../ide/dist/giecko-ide-$GIECKO_IDE_VER.vsix"
 seed_ide() {
-  local dir="$HOME/.local/share/code-server/User"
-  mkdir -p "$dir"
-  [ -f "$dir/settings.json" ] || cp "$SCRIPT_DIR/../ide/settings-default.json" "$dir/settings.json" 2>/dev/null || true
+  local dir="$SESS_HOME/.local/share/code-server/User"
+  run_as_sess mkdir -p "$dir"
+  [ -f "$dir/settings.json" ] || run_as_sess cp "$SCRIPT_DIR/../ide/settings-default.json" "$dir/settings.json" 2>/dev/null || true
   if [ -n "${CODE_BIN:-}" ] && [ -x "${CODE_BIN:-}" ] && [ -f "$GIECKO_VSIX" ]; then
-    "$CODE_BIN" --install-extension "$GIECKO_VSIX" >/dev/null 2>&1 || echo "  giecko IDE extension install skipped"
+    run_as_sess "$CODE_BIN" --install-extension "$GIECKO_VSIX" >/dev/null 2>&1 || echo "  giecko IDE extension install skipped"
   fi
 }
 if [ "$NEED_CODE" = 1 ] && [ "$CODE_DL_OK" = 1 ]; then seed_ide || true; fi
@@ -648,7 +707,14 @@ restore_home() {
   local auth="https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO_SLUG}.git"
   if git clone -q --depth 1 --branch "$HOME_BRANCH" "$auth" "$rdir" 2>/dev/null; then
     if [ -f "$rdir/home.tgz" ]; then
-      tar -xzf "$rdir/home.tgz" -C "$HOME" 2>/dev/null && echo "  home restored from $HOME_BRANCH" || echo "  home restore had issues"
+      if [ "$SESS_USER_OK" = 1 ]; then
+        priv tar -xzf "$rdir/home.tgz" -C "$SESS_HOME" 2>/dev/null \
+          && priv chown -R "$USER" "$SESS_HOME" 2>/dev/null \
+          && echo "  home restored from $HOME_BRANCH (user $USER)" \
+          || echo "  home restore had issues"
+      else
+        tar -xzf "$rdir/home.tgz" -C "$HOME" 2>/dev/null && echo "  home restored from $HOME_BRANCH" || echo "  home restore had issues"
+      fi
     else
       echo "  no home snapshot file, starting fresh"
     fi
@@ -667,8 +733,13 @@ persist_home() {
   git clone -q --depth 1 --branch "$HOME_BRANCH" "$auth" "$rdir" 2>/dev/null \
     || (git clone -q --depth 1 "$auth" "$rdir" 2>/dev/null && cd "$rdir" && git checkout -q --orphan "$HOME_BRANCH" && git rm -q -rf . 2>/dev/null)
   [ -d "$rdir/.git" ] || { echo "  home snapshot branch unavailable"; rm -rf "$rdir"; return 0; }
-  tar -czf "$rdir/home.tgz" -C "$HOME" \
-    .bashrc .profile .bash_profile .zshrc .gitconfig .tmux.conf .vim .ssh .config 2>/dev/null || true
+  if [ "$SESS_USER_OK" = 1 ]; then
+    priv tar -czf "$rdir/home.tgz" -C "$SESS_HOME" \
+      .bashrc .profile .bash_profile .zshrc .gitconfig .tmux.conf .vim .ssh .config 2>/dev/null || true
+  else
+    tar -czf "$rdir/home.tgz" -C "$HOME" \
+      .bashrc .profile .bash_profile .zshrc .gitconfig .tmux.conf .vim .ssh .config 2>/dev/null || true
+  fi
   [ -f "$rdir/home.tgz" ] || { echo "  nothing to snapshot for the persistent home"; rm -rf "$rdir"; return 0; }
   local size
   size=$(du -m "$rdir/home.tgz" | cut -f1)
@@ -732,7 +803,7 @@ install_shell_candy() {
 [ -f "$ENV_FILE" ] && . "$ENV_FILE"
 export PATH="\$HOME/.local/bin:/usr/local/bin:\$PATH"
 alias ll='ls -la' gs='git status --short --branch' save='giecko save' 2>/dev/null || true
-if [ -n "\$PS1" ]; then export PS1=' \[\e[1;32m\]giecko\[\e[0m\]:\[\e[1;34m\]\W\[\e[0m\]\$ '; fi
+if [ -n "\$PS1" ]; then export PS1=' \[\e[1;32m\]\${GIECKO_USER:-\u}\[\e[0m\]:\[\e[1;34m\]\W\[\e[0m\]\$ '; fi
 giecko_motd() {
   echo " Giecko run \$GIECKO_RUN_ID · \$GIECKO_REGION · \$GIECKO_STACK on \$GIECKO_DISTRO"
   [ -n "\$GIECKO_URL_TERM" ] && echo "   terminal: \$GIECKO_URL_TERM"
@@ -743,12 +814,24 @@ case \$- in *i*) giecko_motd 2>/dev/null || true;; esac
 EOF
   if [ "$CAN_ROOT" = 1 ] && [ "$OSNAME" = "Linux" ]; then
     priv cp "$snip" /etc/profile.d/giecko.sh || true
+    if [ "$SESS_USER_OK" = 1 ]; then
+      grep -qx 'umask 002' "$SESS_HOME/.bashrc" 2>/dev/null \
+        || priv sed -i '1i umask 002' "$SESS_HOME/.bashrc" 2>/dev/null \
+        || printf 'umask 002\n' | priv tee "$SESS_HOME/.bashrc" >/dev/null 2>/dev/null \
+        || true
+    fi
+    if [ "$SESS_USER_OK" = 1 ] && [ "$SESS_HOME" != "$HOME" ]; then
+      printf '[ -f /etc/profile.d/giecko.sh ] && . /etc/profile.d/giecko.sh\n' | priv tee -a "$SESS_HOME/.bashrc" >/dev/null 2>/dev/null || true
+    fi
     grep -q "profile.d/giecko.sh" "$HOME/.bashrc" 2>/dev/null \
       || echo '[ -f /etc/profile.d/giecko.sh ] && . /etc/profile.d/giecko.sh' >> "$HOME/.bashrc"
   else
-    cp "$snip" "$HOME/.giecko.sh"
-    grep -q ".giecko.sh" "$HOME/.bashrc" 2>/dev/null \
-      || echo "[ -f \$HOME/.giecko.sh ] && . \$HOME/.giecko.sh" >> "$HOME/.bashrc"
+    cp "$snip" "$SESS_HOME/.giecko.sh" 2>/dev/null || priv cp "$snip" "$SESS_HOME/.giecko.sh" 2>/dev/null || true
+    [ "$SESS_USER_OK" = 1 ] && priv chown "$USER" "$SESS_HOME/.giecko.sh" 2>/dev/null
+    if ! grep -q ".giecko.sh" "$SESS_HOME/.bashrc" 2>/dev/null; then
+      printf '[ -f "$HOME/.giecko.sh" ] && . "$HOME/.giecko.sh"\n' | priv tee -a "$SESS_HOME/.bashrc" >/dev/null 2>/dev/null \
+        || echo '[ -f "$HOME/.giecko.sh" ] && . "$HOME/.giecko.sh"' >> "$SESS_HOME/.bashrc"
+    fi
   fi
 }
 install_shell_candy || true
@@ -790,6 +873,24 @@ if [ -n "${GIECKO_RESTORE:-}" ] && [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -n "$
   unset _RAUTH
 fi
 
+share_workspace() {
+  [ "$SESS_USER_OK" = 1 ] || return 0
+  [ -d "$WORKDIR" ] || return 0
+  if [ "$OSNAME" = "Darwin" ]; then
+    chmod -R +a "user $USER allow list,add_file,search,read,write,delete,append,execute,file_inherit,directory_inherit" "$WORKDIR" 2>/dev/null \
+      && echo " workspace shared with $USER (ACL)" \
+      || echo "  workspace ACL for $USER failed, permission errors possible"
+  else
+    local grp
+    grp="$(id -gn)"
+    priv chown -R "$USER:$grp" "$WORKDIR" 2>/dev/null || { echo "  workspace handover to $USER failed, permission errors possible"; return 0; }
+    priv chmod -R g+rwX "$WORKDIR" 2>/dev/null || true
+    priv find "$WORKDIR" -type d -exec chmod g+s {} + 2>/dev/null || true
+    echo " workspace shared with $USER (group $grp)"
+  fi
+}
+share_workspace || true
+
 setup_distro() {
   local img setup
   case "$DISTRO" in
@@ -809,7 +910,17 @@ setup_distro() {
   echo " provisioning container shell (tmux + curl)..."
   docker exec giecko-box sh -c "$setup" > "$RUNDIR/distro-setup.log" 2>&1 \
     || echo "  container provisioning had issues, probing for a usable shell anyway"
-  if docker exec giecko-box command -v tmux >/dev/null 2>&1; then CONTAINER_SHELL=(tmux new -A -s giecko)
+  cuid="$(id -u)"; cgid="$(id -g)"
+  if [ -n "$USER" ] && ! docker exec giecko-box id -u "$USER" >/dev/null 2>&1; then
+    [ "$DISTRO" = "alpine" ] && docker exec giecko-box sh -c "apk add --no-cache shadow >/dev/null 2>&1" || true
+    docker exec giecko-box sh -c "groupadd -g $cgid gwork 2>/dev/null; useradd -m -u $cuid -g $cgid -s /bin/bash $USER 2>/dev/null || adduser -D -u $cuid -G gwork -s /bin/bash $USER 2>/dev/null" >/dev/null 2>&1 || true
+    docker exec giecko-box sh -c "echo 'umask 002' >> /home/$USER/.profile 2>/dev/null; echo 'umask 002' >> /home/$USER/.bashrc 2>/dev/null" >/dev/null 2>&1 || true
+  fi
+  if [ -n "$USER" ] && docker exec giecko-box id -u "$USER" >/dev/null 2>&1 && docker exec giecko-box command -v bash >/dev/null 2>&1; then
+    if docker exec giecko-box command -v tmux >/dev/null 2>&1; then CONTAINER_SHELL=(su - "$USER" -c "tmux new -A -s giecko")
+    else CONTAINER_SHELL=(su - "$USER"); fi
+    echo "  container session user: $USER (uid $cuid)"
+  elif docker exec giecko-box command -v tmux >/dev/null 2>&1; then CONTAINER_SHELL=(tmux new -A -s giecko)
   elif docker exec giecko-box command -v bash >/dev/null 2>&1; then CONTAINER_SHELL=(bash -l)
   else CONTAINER_SHELL=(sh); fi
   echo " container shell: ${CONTAINER_SHELL[*]}"
@@ -857,7 +968,12 @@ if [ "$NEED_TTYD" = 1 ]; then
   echo "  starting ttyd on :$TERM_PORT (cmd: ${SHELL_CMD[*]})..."
   rm -f "$RUNDIR"/ttyd.log "$RUNDIR"/ttyd.pid
   _TTYD_PWD="$PWD"; cd "$WORKDIR"
-  GIECKO_RUN_ID="$RUN_ID" GIECKO_REGION="$REGION" GIECKO_STACK="$STACK" GIECKO_DISTRO="$DISTRO_EFF" GIECKO_USER="$USER" GIECKO_WORK_BRANCH="$WORK_BRANCH" GIECKO_AUTOSAVE_MIN="$AUTOSAVE_MIN" GIECKO_END_EPOCH="$(( $(date +%s) + DURATION_MIN * 60 - SECONDS ))" nohup ttyd "${TTYD_OPTS[@]}" "${SHELL_CMD[@]}" > "$RUNDIR/ttyd.log" 2>&1 &
+  GIECKO_ENV_TTYD=(GIECKO_RUN_ID="$RUN_ID" GIECKO_REGION="$REGION" GIECKO_STACK="$STACK" GIECKO_DISTRO="$DISTRO_EFF" GIECKO_USER="$USER" GIECKO_WORK_BRANCH="$WORK_BRANCH" GIECKO_AUTOSAVE_MIN="$AUTOSAVE_MIN" GIECKO_END_EPOCH="$(( $(date +%s) + DURATION_MIN * 60 - SECONDS ))")
+  if [ "$SESS_USER_OK" = 1 ]; then
+    as_user "$USER" "${GIECKO_ENV_TTYD[@]}" nohup ttyd "${TTYD_OPTS[@]}" "${SHELL_CMD[@]}" > "$RUNDIR/ttyd.log" 2>&1 &
+  else
+    env "${GIECKO_ENV_TTYD[@]}" nohup ttyd "${TTYD_OPTS[@]}" "${SHELL_CMD[@]}" > "$RUNDIR/ttyd.log" 2>&1 &
+  fi
   echo "$!" > "$RUNDIR/ttyd.pid"
   cd "$_TTYD_PWD"
   echo "⏳ waiting for ttyd..."
@@ -874,10 +990,10 @@ if [ "$NEED_CODE" = 1 ]; then
   if [ "$IS_WINDOWS" = 1 ] && command -v cygpath >/dev/null 2>&1; then CODE_DIR="$(cygpath -m "$WORKDIR")"; fi
   GIECKO_ENV=(GIECKO_RUN_ID="$RUN_ID" GIECKO_REGION="$REGION" GIECKO_STACK="$STACK" GIECKO_DISTRO="$DISTRO_EFF" GIECKO_USER="$USER" GIECKO_WORK_BRANCH="$WORK_BRANCH" GIECKO_AUTOSAVE_MIN="$AUTOSAVE_MIN" GIECKO_END_EPOCH="$(( $(date +%s) + DURATION_MIN * 60 - SECONDS ))" GIECKO_BOOT_SECS="$SECONDS")
   if [ -n "$PASSWORD" ]; then
-    env "${GIECKO_ENV[@]}" PASSWORD="$PASSWORD" nohup "$CODE_BIN" --bind-addr "127.0.0.1:$CODE_PORT" \
+    run_as_sess env "${GIECKO_ENV[@]}" PASSWORD="$PASSWORD" nohup "$CODE_BIN" --bind-addr "127.0.0.1:$CODE_PORT" \
       --auth password --disable-telemetry "$CODE_DIR" > "$RUNDIR/code-server.log" 2>&1 &
   else
-    env "${GIECKO_ENV[@]}" nohup "$CODE_BIN" --bind-addr "127.0.0.1:$CODE_PORT" \
+    run_as_sess env "${GIECKO_ENV[@]}" nohup "$CODE_BIN" --bind-addr "127.0.0.1:$CODE_PORT" \
       --auth none --disable-telemetry "$CODE_DIR" > "$RUNDIR/code-server.log" 2>&1 &
   fi
   echo "$!" > "$RUNDIR/code.pid"
@@ -924,14 +1040,17 @@ if [ "$STACK" = "desktop" ]; then
     fi
     VNC_PW="${ACCOUNT_PW:0:8}"
     DESK_USER_PW="$ACCOUNT_PW"
-    if priv sysadminctl -addUser "$USER" -password "$ACCOUNT_PW" -admin >/dev/null 2>&1; then
-      echo "  macOS desktop login created: $USER / the session password"
+      if id -u "$USER" >/dev/null 2>&1; then
+        priv sysadminctl -resetPasswordFor "$USER" -newPassword "$ACCOUNT_PW" >/dev/null 2>&1 || true
+        echo "  macOS desktop login ready: $USER / the session password"
+      elif priv sysadminctl -addUser "$USER" -password "$ACCOUNT_PW" -admin >/dev/null 2>&1; then
+        echo "  macOS desktop login created: $USER / the session password"
+      else
+        echo "  could not create the macOS desktop login; the VNC password still applies"
+      fi
       if dseditgroup -o read com.apple.access_screensharing >/dev/null 2>&1; then
         priv dseditgroup -o edit -a "$USER" -t user com.apple.access_screensharing || true
       fi
-    else
-      echo "  could not create the macOS desktop login; the VNC password still applies"
-    fi
     priv "$KS" -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw "$VNC_PW" -restart -agent -privs -all || fail "could not enable the macOS VNC server"
     vup=0
     for _ in {1..30}; do nc -z 127.0.0.1 "$VNC_PORT" 2>/dev/null && { vup=1; break; }; sleep 2; done
