@@ -17,20 +17,24 @@ flowchart LR
         T1["tunnel: terminal"]
         T2["tunnel: IDE"]
         T3["tunnel: desktop"]
+        T4["tunnel: console"]
     end
     subgraph runner["GitHub Actions runner (ephemeral)"]
         TD["GIECKO Terminal :7681"]
         CS["GIECKO IDE :8080"]
         NV["noVNC :6080"]
+        CV["gieckoVNC :7900"]
         SH["tmux + bash"]
         GIT["git (save branches)"]
     end
     B --> T1 --> TD
     B --> T2 --> CS
     B --> T3 --> NV
+    B --> T4 --> CV
     TD --> SH
     CS --> SH
     NV --> SH
+    CV -.-> SH
     SH --> GIT
 ```
 
@@ -43,7 +47,9 @@ flowchart LR
    fetched in parallel. Ours first, upstream as fallback
 4. **packages** — tmux, jq, tree, htop, fastfetch, qrencode, plus your
    extras; `clangd` when the IDE stack runs
-5. **services** — ttyd and code-server bind to `127.0.0.1` only
+5. **services** — ttyd and code-server bind to `127.0.0.1` only; the
+   gieckoVNC console (python3, port 7900) starts before them all and
+   records every boot line from here on
 6. **tunnels** — one cloudflared quick tunnel per service, each with its
    random `trycloudflare.com` name (or one named tunnel for your domain)
 7. **env** — `~/.giecko.env` (or `/etc/giecko.env`, or
@@ -60,6 +66,7 @@ flowchart LR
 | GIECKO IDE | 8080 | `code-server` (our build) |
 | Desktop web | 6080 | noVNC websockify |
 | Desktop VNC | 5900 | TightVNC / macOS VNC / Xvfb+X11VNC |
+| Console (gieckoVNC) | 7900 | `python3 scripts/giecko-vnc.py` |
 
 Only the tunnels are public; all services bind to loopback.
 

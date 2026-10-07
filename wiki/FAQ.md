@@ -1,6 +1,6 @@
 # <img src="https://cdn.simpleicons.org/stackoverflow/3FB950" width="28" valign="middle"> FAQ
 
-![answers](https://img.shields.io/badge/count-20-3FB950?labelColor=0B111C&style=flat-square)
+![answers](https://img.shields.io/badge/count-21-3FB950?labelColor=0B111C&style=flat-square)
 
 > The questions that come up in the first five minutes of using
 > Giecko.
@@ -91,6 +91,14 @@ is used for the save branches and the persistent home.
 **Can someone else join my session?**
 Anyone with the URL **and** the password. There is no read-only guest
 mode — a joiner is you, as far as the shell is concerned.
+
+**I ran `sudo reboot` / my runner vanished — where did the console go?**
+With the machine. [gieckoVNC](GIECKO-VNC.md) survives every *process*
+in the session — a killed shell, a dead IDE, a hung tmux — but it
+lives on the runner like everything else. When the VM itself goes
+down, the console URL stops answering and the Actions log is the only
+record left. On hosted GitHub runners, nobody can watch a machine
+that no longer exists.
 
 **Does it work on a phone?**
 Three ways: the browser (scan the QR), the [Mobile App](Mobile-App.md)

@@ -2,6 +2,18 @@
 
 ## 0.7.0
 
+- New: gieckoVNC, a console for the machine itself - a tiny python3
+  server (stdlib only) that runs beside the session from the first
+  second and outlives every process in it. It replays the full boot
+  log from byte zero, streams live kernel messages, tails every
+  service log (terminal, vscode, desktop, tunnels), shows uptime,
+  load, memory and disk with a session countdown, and has a NEW SHELL
+  button that restarts your tmux server without touching anything
+  else. Same login as the terminal, same QR in the logs, listed in
+  the run summary and giecko urls. It survives shell and IDE
+  restarts; the one thing it cannot survive is the VM itself going
+  down (sudo reboot or the runner being taken back) - on hosted
+  runners that is outside anyone's reach
 - New: the session runs as the username you pick. A real OS account is
   created on the runner, and the shell, tmux and the IDE terminals run
   as that user: whoami, prompts, file ownership and giecko save commits

@@ -46,6 +46,8 @@ See [Commit Triggers](Commit-Triggers.md) for the full list.
 - [Desktop Mode](Desktop-Mode.md) — the GUI stack, VNC, and logins
 - On macOS and Windows runners the desktop uses the real OS desktop
   over VNC; on Linux it is XFCE inside Xvfb
+- [gieckoVNC](GIECKO-VNC.md) — the always-on machine console, present
+  on every stack (unix runners; not on windows)
 
 ## Rules the stacks share
 

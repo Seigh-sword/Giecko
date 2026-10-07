@@ -14,6 +14,7 @@
 
 - [GIECKO IDE](GIECKO-IDE.md)
 - [GIECKO Terminal](GIECKO-Terminal.md)
+- [GIECKO VNC](GIECKO-VNC.md)
 - [Desktop Mode](Desktop-Mode.md)
 - [Mobile App](Mobile-App.md)
 - [tiny-giecko](tiny-giecko.md)

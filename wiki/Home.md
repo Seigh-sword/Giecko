@@ -40,12 +40,13 @@ branches, and a `giecko` CLI inside the session.
 | <img src="https://cdn.simpleicons.org/npm/3FB950" width="16"> npm CLI | `npm install -g giecko` | [CLI Reference](CLI-Reference.md) |
 | <img src="https://cdn.simpleicons.org/android/3FB950" width="16"> Phone | APK from the releases page | [Mobile App](Mobile-App.md) |
 | <img src="https://cdn.simpleicons.org/raspberrypi/3FB950" width="16"> No browser | native C99 client | [tiny-giecko](tiny-giecko.md) |
+| <img src="https://cdn.simpleicons.org/linux/3FB950" width="16"> Machine view | always-on console, survives the shell | [GIECKO VNC](GIECKO-VNC.md) |
 
 ## The wiki
 
 **Basics** — [Getting Started](Getting-Started.md) · [Architecture](Architecture.md) · [Stacks](Stacks.md) · [Distros & OS](Distros.md) · [Networking](Networking.md)
 
-**The apps** — [GIECKO IDE](GIECKO-IDE.md) · [GIECKO Terminal](GIECKO-Terminal.md) · [Desktop Mode](Desktop-Mode.md) · [Mobile App](Mobile-App.md) · [tiny-giecko](tiny-giecko.md)
+**The apps** — [GIECKO IDE](GIECKO-IDE.md) · [GIECKO Terminal](GIECKO-Terminal.md) · [GIECKO VNC](GIECKO-VNC.md) · [Desktop Mode](Desktop-Mode.md) · [Mobile App](Mobile-App.md) · [tiny-giecko](tiny-giecko.md)
 
 **Working inside** — [Session Commands](Session-Commands.md) · [Rooms](Rooms.md) · [Persistence](Persistence.md) · [File Transfer](File-Transfer.md)
 
