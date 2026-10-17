@@ -34,8 +34,10 @@ The session runs as a dedicated OS account named after your `user`
 input, not as the runner service account. The workspace is shared
 with the runner through a common group so background autosave and
 in-session saves both work. Names that already exist as system
-accounts (`root`, `daemon`, …) are refused. On GitHub runners the
-session account inherits the runner's passwordless sudo — treat it
+accounts (`root`, `daemon`, …) are refused. The account is created
+with a locked password — no password exists to type — so boot grants
+it passwordless sudo through a validated `/etc/sudoers.d` entry
+(distro containers get the same grant when they ship sudo). Treat it
 as exactly what it is: a disposable root-capable box that dies at
 the duration limit.
 

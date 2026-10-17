@@ -1,6 +1,6 @@
 # <img src="https://cdn.simpleicons.org/stackoverflow/3FB950" width="28" valign="middle"> FAQ
 
-![answers](https://img.shields.io/badge/count-21-3FB950?labelColor=0B111C&style=flat-square)
+![answers](https://img.shields.io/badge/count-22-3FB950?labelColor=0B111C&style=flat-square)
 
 > The questions that come up in the first five minutes of using
 > Giecko.
@@ -24,6 +24,16 @@ It should not — the shell and IDE terminals run as the OS account
 named by your `user` input. If that name cannot become an account
 (a system name, a windows runner), the boot log explains the
 fallback and the prompt still shows your chosen name.
+
+**I typed `sudo` and it wants a password — what is it?**
+Nothing — there is no password. The session account is created
+locked, and boot grants it passwordless sudo (a validated
+`/etc/sudoers.d` entry), so `sudo` should just run. If it asks,
+you are in a session from before that grant existed — relaunch and
+it works. The workflow's `password` input is the browser login
+only, never a machine password. What you have root on is a
+disposable runner that dies with the run — see
+[Security](Security.md).
 
 **Why is typing slow?**
 The speed of light. Your keys travel to a Cloudflare edge and a runner

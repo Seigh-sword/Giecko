@@ -2,6 +2,13 @@
 
 ## 0.7.0
 
+- Fixed: typing sudo in the session asked for a password that did
+  not exist. The session user is created with a locked password, so
+  the prompt was a dead end; boot now grants it passwordless sudo
+  through a visudo-validated /etc/sudoers.d entry (rolled back on
+  failure), distro containers install sudo and get the same grant,
+  and the report says which way it went. The login password stays
+  what it always was: for the browser only
 - New: gieckoVNC, a console for the machine itself - a tiny python3
   server (stdlib only) that runs beside the session from the first
   second and outlives every process in it. It replays the full boot
