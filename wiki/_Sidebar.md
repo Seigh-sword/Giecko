@@ -43,3 +43,4 @@
 
 - [Troubleshooting](Troubleshooting.md)
 - [FAQ](FAQ.md)
+- [The Sudo Mystery](The-Sudo-Mystery.md)

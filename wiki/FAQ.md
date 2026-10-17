@@ -33,7 +33,9 @@ you are in a session from before that grant existed — relaunch and
 it works. The workflow's `password` input is the browser login
 only, never a machine password. What you have root on is a
 disposable runner that dies with the run — see
-[Security](Security.md).
+[Security](Security.md). The full investigation of why
+nothing-plus-Enter could never work is in
+[The Sudo Mystery](The-Sudo-Mystery.md).
 
 **Why is typing slow?**
 The speed of light. Your keys travel to a Cloudflare edge and a runner
