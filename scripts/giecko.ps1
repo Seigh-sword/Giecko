@@ -189,7 +189,7 @@ function Publish-Report([string]$Status, [string]$Note) {
   Set-Content -Path (Join-Path $rdir "reports/run-$RunId.md") -Value ($body -join "`n")
   Push-Location $rdir
   git add "reports/run-$RunId.md"
-  git -c user.email="giecko@local" -c user.name="giecko" commit -qm "report $RunId: $Status"
+  git -c user.email="giecko@local" -c user.name="giecko" commit -qm "report ${RunId}: $Status"
   git push -q -u origin giecko-reports 2>$null
   $rc = $LASTEXITCODE
   if ($rc -ne 0) {
@@ -604,6 +604,8 @@ if ($DeskOk -and -not $Named) {
   $UrlDesk = "$UrlDesk/vnc.html?autoconnect=true&resize=scale"
 }
 
+$BootSecs = [int]((Get-Date) - $BootStart).TotalSeconds
+$EndEpoch = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $DurationI * 60 - $BootSecs
 $envContent = @"
 GIECKO_URL_TERM='$UrlTerm'
 GIECKO_URL_CODE='$UrlCode'
@@ -620,8 +622,6 @@ GIECKO_BOOT_SECS='$BootSecs'
 GIECKO_NAMED='$Named'
 GIECKO_PERSIST='$PersistHome'
 "@
-$BootSecs = [int]((Get-Date) - $BootStart).TotalSeconds
-$EndEpoch = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $DurationI * 60 - $BootSecs
 if ($env:GIECKO_CONFIG_DIR) {
   New-Item -ItemType Directory -Force -Path $env:GIECKO_CONFIG_DIR | Out-Null
   Set-Content -Path (Join-Path $env:GIECKO_CONFIG_DIR "giecko.env") -Value $envContent
